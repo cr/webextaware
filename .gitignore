@@ -1,0 +1,10 @@
+bin
+include
+lib
+man
+pip-selfcheck.json
+.Python
+.idea/
+__pycache__/
+webextaware.egg-info/
+webext_hashfs

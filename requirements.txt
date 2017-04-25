@@ -1,0 +1,6 @@
+coloredlogs
+hashfs
+ipython
+mock
+nose >= 1.3
+requests
