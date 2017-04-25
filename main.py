@@ -8,6 +8,7 @@ import argparse
 import bz2
 import coloredlogs
 import hashfs
+import json
 import logging
 import os
 import pprint
@@ -42,11 +43,12 @@ def get_argparser():
                         help='Path to working directory',
                         type=os.path.abspath,
                         action='store',
-                        default='%s/.webextaware' % home)
-    parser.add_argument('-i', '--ipython',
-                        help='Drop into ipython shell',
-                        action='store_true',
-                        default=False)
+                        default=os.path.join(home, '.webextaware'))
+    parser.add_argument('mode',
+                        nargs='?',
+                        choices=['info', 'sync', 'metadata', 'manifests', 'stats', 'ipython'],
+                        help='run mode',
+                        default="info")
     return parser
 
 
@@ -62,20 +64,67 @@ def main():
 
     logger.debug("Command arguments: %s" % args)
 
-    metadata = amo.download_matedata(all_pages=False)
-    hash_fs = hashfs.HashFS('webext_hashfs', depth=4, width=1, algorithm='sha256')
-    # amo.update_files(metadata, hash_fs)
+    if not os.path.isdir(args.workdir):
+        os.makedirs(args.workdir)
 
-    import json
+    webext_data_dir = os.path.join(args.workdir, "webext_data")
+    if not os.path.isdir(webext_data_dir):
+        os.makedirs(webext_data_dir)
 
-    with bz2.open("2017-04-25_dump.json.bz2", "w") as f:
-        f.write(json.dumps(metadata).encode("utf-8"))
+    metadata_file = os.path.join(args.workdir, "amo_metadata.json.bz2")
 
-    print(len(metadata))
+    hash_fs = hashfs.HashFS(webext_data_dir, depth=4, width=1, algorithm='sha256')
 
-    logger.critical("RUNNING, NOT")
+    if args.mode == "info":
+        try:
+            with bz2.open(metadata_file, "r") as f:
+                metadata = json.load(f)
+        except FileNotFoundError:
+            metadata = []
+        print("Local metadata set: %d entries" % len(metadata))
+        print("Local web extension set: %d files" % len(hash_fs))
 
-    e = webext.WebExtension("webext_hashfs//f/9/2/9/9ee56f1bced3ae17c01e1829165f192e7866321cf169b0d03803a596d7e7.zip")
+    elif args.mode == "sync":
+        logger.info("Downloading current metadata set from AMO")
+        metadata = amo.download_matedata(maximum=1000)
+        logger.info("Received metadata set containing %d web extensions" % len(metadata))
+        with bz2.open(metadata_file, "w") as f:
+            f.write(json.dumps(metadata).encode("utf-8"))
+        logger.info("Downloading missing web extension files")
+        amo.update_files(metadata, hash_fs)
 
-    from IPython import embed
-    embed()
+    elif args.mode == "metadata":
+        try:
+            with bz2.open(metadata_file, "r") as f:
+                metadata = json.load(f)
+        except FileNotFoundError:
+            metadata = []
+        print(json.dumps(metadata, sort_keys=True, indent=4))
+
+    elif args.mode == "manifests":
+        all_exts = []
+        for ext_file in hash_fs:
+            ext = webext.WebExtension(hash_fs.get(ext_file).abspath)
+            try:
+                all_exts.append(ext.manifest().json)
+            except json.decoder.JSONDecodeError:
+                pass
+        print(json.dumps(all_exts, sort_keys=True, indent=4))
+
+    elif args.mode == "stats":
+        try:
+            with bz2.open(metadata_file, "r") as f:
+                metadata = json.load(f)
+        except FileNotFoundError:
+            metadata = []
+        for ext in metadata:
+            print("%d\t%d\t%d\t%s" % (
+                ext["id"], ext["average_daily_users"], ext["weekly_downloads"], json.dumps(ext["name"])
+            ))
+
+    elif args.mode == "ipython":
+        test_ext_file = os.path.join(webext_data_dir,
+                            "f/9/2/9/9ee56f1bced3ae17c01e1829165f192e7866321cf169b0d03803a596d7e7.zip")
+        test_ext = webext.WebExtension(test_ext_file)
+        from IPython import embed
+        embed()

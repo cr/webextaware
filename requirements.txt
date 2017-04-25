@@ -1,4 +1,5 @@
 coloredlogs
+grequests
 hashfs
 ipython
 mock
