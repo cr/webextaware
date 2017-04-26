@@ -5,7 +5,6 @@
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import argparse
-import bz2
 import coloredlogs
 import hashfs
 import json
@@ -51,9 +50,13 @@ def get_argparser():
                         default=False)
     parser.add_argument('mode',
                         nargs='?',
-                        choices=['info', 'sync', 'metadata', 'manifests', 'stats', 'ipython'],
+                        choices=['info', 'sync', 'metadata', 'manifests', 'stats', 'get', 'unzip', 'ipython'],
                         help='run mode',
-                        default="info")
+                        default='info')
+    parser.add_argument('modeargs',
+                        nargs='*',
+                        action='append',
+                        help='positional arguments for the run mode')
     return parser
 
 
@@ -100,15 +103,19 @@ def main():
         meta = md.Metadata(filename=metadata_file)
         print(json.dumps(meta.json(), sort_keys=True, indent=4))
 
-    elif args.mode == "manifests":
+    elif args.mode == "manifest":
+        if len(args.modeargs[0]) == 0:
+            todo_list = hashfs
+        else:
+            todo_list = [int(id) for id in args.modeargs[0]]
         all_exts = []
-        for ext_file in hash_fs:
+        for ext_file in todo_list:
             ext = webext.WebExtension(hash_fs.get(ext_file).abspath)
             try:
                 all_exts.append(ext.manifest().json)
             except json.decoder.JSONDecodeError:
                 pass
-        print(json.dumps(all_exts, sort_keys=True, indent=4))
+        print(json.dumps(all_exts, indent=4))
 
     elif args.mode == "stats":
         meta = md.Metadata(filename=metadata_file)
@@ -124,10 +131,56 @@ def main():
                 api_permissions
             ))
 
-    elif args.mode == "ipython":
+    elif args.mode == "get":
+        if len(args.modeargs[0]) == 0:
+            logger.critical("Missing ID")
         meta = md.Metadata(filename=metadata_file)
-        test_ext_file = os.path.join(webext_data_dir,
-                            "f/9/2/9/9ee56f1bced3ae17c01e1829165f192e7866321cf169b0d03803a596d7e7.zip")
-        e = webext.WebExtension(test_ext_file)
+        for id in args.modeargs[0]:
+            id = int(id)
+            ext = meta.by_id(id)
+            if ext is not None:
+                for f in ext["current_version"]["files"]:
+                    hash = f["hash"].split(":")[1]
+                    archive = hash_fs.get(hash).abspath
+                    print(id, archive)
+
+    elif args.mode == "unzip":
+        if len(args.modeargs[0]) == 0:
+            logger.critical("Missing ID")
+        id = int(args.modeargs[0][0])
+        if len(args.modeargs[0]) >= 2:
+            folder = args.modeargs[0][1]
+        else:
+            folder = os.path.join("/tmp", str(id))
+        meta = md.Metadata(filename=metadata_file)
+        ext = meta.by_id(id)
+        archives = []
+        if ext is not None:
+            for f in ext["current_version"]["files"]:
+                hash = f["hash"].split(":")[1]
+                archive_path = hash_fs.get(hash).abspath
+                unzip_path = os.path.join(folder, hash)
+                os.makedirs(unzip_path)
+                archives.append(unzip_path)
+                ex = webext.WebExtension(archive_path)
+                ex.unzip(unzip_path)
+        print(id, " ".join(archives))
+
+
+    elif args.mode == "ipython":
+        if len(args.modeargs[0]) == 0:
+            logger.critical("Missing ID")
+        meta = md.Metadata(filename=metadata_file)
+        id = int(args.modeargs[0][0])
+        ext = meta.by_id(id)
+        files = []
+        if ext is not None:
+            for f in ext["current_version"]["files"]:
+                hash = f["hash"].split(":")[1]
+                archive = hash_fs.get(hash).abspath
+                files.append(webext.WebExtension(archive))
+        print("id: %d" % id)
+        print("ext: %s" % ext)
+        print("files: %s" % files)
         from IPython import embed
         embed()

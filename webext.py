@@ -27,6 +27,9 @@ class WebExtension(object):
                 with self.zip.open(filename) as f:
                     yield f, zip_obj
 
+    def unzip(self, folder):
+        self.zip.extractall(folder)
+
 
 class Manifest(object):
 
@@ -49,3 +52,6 @@ class Manifest(object):
             # keys.sort()
             for key in keys:
                 self.traverse(ptr[key], path + '/' + key)
+
+    def __str__(self):
+        return json.dumps(self.json, indent=4)

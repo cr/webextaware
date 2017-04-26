@@ -43,6 +43,18 @@ class Metadata(object):
             for file_data in ext["current_version"]["files"]:
                 self.__hash_index[file_data["hash"].split(":")[1]] = ext
 
+    def by_id(self, id):
+        if id in self.__id_index:
+            return self.__id_index[id]
+        else:
+            return None
+
+    def by_hash(self, hash):
+        if hash in self.__hash_index:
+            return self.__hash_index[hash]
+        else:
+            return None
+
     def __iter__(self):
         for ext in self.__data:
             for f in ext["current_version"]["files"]:
