@@ -8,6 +8,7 @@ import logging
 import pprint
 import requests
 
+
 logger = logging.getLogger(__name__)
 amo_server = "https://addons.mozilla.org"
 pp = pprint.PrettyPrinter(indent=4)

@@ -14,6 +14,7 @@ import os
 import pprint
 
 import amo
+import metadata as md
 import webext
 
 
@@ -44,6 +45,10 @@ def get_argparser():
                         type=os.path.abspath,
                         action='store',
                         default=os.path.join(home, '.webextaware'))
+    parser.add_argument('-n', '--noupdate',
+                        help='Do not update metadata',
+                        action='store_true',
+                        default=False)
     parser.add_argument('mode',
                         nargs='?',
                         choices=['info', 'sync', 'metadata', 'manifests', 'stats', 'ipython'],
@@ -54,7 +59,7 @@ def get_argparser():
 
 # This is the entry point used in setup.py
 def main():
-    global logger, pp
+    global logger
 
     parser = get_argparser()
     args = parser.parse_args()
@@ -72,34 +77,28 @@ def main():
         os.makedirs(webext_data_dir)
 
     metadata_file = os.path.join(args.workdir, "amo_metadata.json.bz2")
-
     hash_fs = hashfs.HashFS(webext_data_dir, depth=4, width=1, algorithm='sha256')
 
     if args.mode == "info":
-        try:
-            with bz2.open(metadata_file, "r") as f:
-                metadata = json.load(f)
-        except FileNotFoundError:
-            metadata = []
-        print("Local metadata set: %d entries" % len(metadata))
+        meta = md.Metadata(filename=metadata_file)
+        print("Local metadata set: %d entries" % len(meta))
         print("Local web extension set: %d files" % len(hash_fs))
 
     elif args.mode == "sync":
-        logger.info("Downloading current metadata set from AMO")
-        metadata = amo.download_matedata(maximum=1000)
-        logger.info("Received metadata set containing %d web extensions" % len(metadata))
-        with bz2.open(metadata_file, "w") as f:
-            f.write(json.dumps(metadata).encode("utf-8"))
+        if args.noupdate:
+            logger.warning("Using stored metadata, not updating")
+            meta = md.Metadata(filename=metadata_file)
+        else:
+            logger.info("Downloading current metadata set from AMO")
+            meta = md.Metadata(filename=metadata_file, data=amo.download_matedata())
+            meta.save()
+        logger.info("Metadata set contains %d web extensions" % len(meta))
         logger.info("Downloading missing web extension files")
-        amo.update_files(metadata, hash_fs)
+        amo.update_files(meta, hash_fs)
 
     elif args.mode == "metadata":
-        try:
-            with bz2.open(metadata_file, "r") as f:
-                metadata = json.load(f)
-        except FileNotFoundError:
-            metadata = []
-        print(json.dumps(metadata, sort_keys=True, indent=4))
+        meta = md.Metadata(filename=metadata_file)
+        print(json.dumps(meta.json(), sort_keys=True, indent=4))
 
     elif args.mode == "manifests":
         all_exts = []
@@ -112,19 +111,23 @@ def main():
         print(json.dumps(all_exts, sort_keys=True, indent=4))
 
     elif args.mode == "stats":
-        try:
-            with bz2.open(metadata_file, "r") as f:
-                metadata = json.load(f)
-        except FileNotFoundError:
-            metadata = []
-        for ext in metadata:
-            print("%d\t%d\t%d\t%s" % (
-                ext["id"], ext["average_daily_users"], ext["weekly_downloads"], json.dumps(ext["name"])
+        meta = md.Metadata(filename=metadata_file)
+        for ext in meta:
+            e = md.Extension(ext)
+            host_permissions, api_permissions = e.permissions()
+            print("%d\t%s\t%d\t%d\t%s\t%s" % (
+                ext["id"],
+                e.name(),
+                ext["average_daily_users"],
+                ext["weekly_downloads"],
+                host_permissions,
+                api_permissions
             ))
 
     elif args.mode == "ipython":
+        meta = md.Metadata(filename=metadata_file)
         test_ext_file = os.path.join(webext_data_dir,
                             "f/9/2/9/9ee56f1bced3ae17c01e1829165f192e7866321cf169b0d03803a596d7e7.zip")
-        test_ext = webext.WebExtension(test_ext_file)
+        e = webext.WebExtension(test_ext_file)
         from IPython import embed
         embed()
