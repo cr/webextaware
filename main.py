@@ -10,10 +10,11 @@ import hashfs
 import json
 import logging
 import os
-import pprint
+import sys
 
 import amo
 import metadata as md
+import scanner
 import webext
 
 
@@ -21,9 +22,6 @@ import webext
 logger = logging.getLogger(__name__)
 coloredlogs.DEFAULT_LOG_FORMAT = "%(asctime)s %(levelname)s %(threadName)s %(name)s %(message)s"
 coloredlogs.install(level='INFO')
-
-# Initialize pretty printer
-pp = pprint.PrettyPrinter(indent=4)
 
 
 def get_argparser():
@@ -50,7 +48,8 @@ def get_argparser():
                         default=False)
     parser.add_argument('mode',
                         nargs='?',
-                        choices=['info', 'sync', 'metadata', 'manifests', 'stats', 'get', 'unzip', 'ipython'],
+                        choices=['info', 'sync', 'metadata', 'manifests', 'stats', 'get', 'unzip',
+                                 'scan', 'ipython'],
                         help='run mode',
                         default='info')
     parser.add_argument('modeargs',
@@ -147,25 +146,65 @@ def main():
     elif args.mode == "unzip":
         if len(args.modeargs[0]) == 0:
             logger.critical("Missing ID")
-        id = int(args.modeargs[0][0])
+        id = args.modeargs[0][0]
         if len(args.modeargs[0]) >= 2:
             folder = args.modeargs[0][1]
         else:
-            folder = os.path.join("/tmp", str(id))
+            folder = "/tmp"
         meta = md.Metadata(filename=metadata_file)
+        if id == "all" or id == "*":
+            ids = [ext["id"] for ext in meta]
+        else:
+            ids = [int(id)]
+        for id in ids:
+            ext = meta.by_id(id)
+            archives = []
+            if ext is not None:
+                ext_unzip_folder = os.path.join(folder, "%d" % id)
+                for f in ext["current_version"]["files"]:
+                    hash = f["hash"].split(":")[1]
+                    archive_path_ref = hash_fs.get(hash)
+                    if archive_path_ref is None:
+                        logger.warning("Missing zip file for ID %d, %s" % (id, hash))
+                    else:
+                        archive_path = archive_path_ref.abspath
+                        unzip_path = os.path.join(ext_unzip_folder, hash)
+                        os.makedirs(unzip_path)
+                        archives.append(unzip_path)
+                        ex = webext.WebExtension(archive_path)
+                        ex.unzip(unzip_path)
+            print(id, " ".join(archives))
+
+    elif args.mode == "scan":
+        if len(args.modeargs[0]) == 0:
+            logger.critical("Missing ID")
+        id = int(args.modeargs[0][0])
+        meta = md.Metadata(filename=metadata_file)
+        retire = scanner.RetireScanner()
+        if not retire.dependencies():
+            sys.exit(5)
+        scanjs = scanner.ScanJSScanner()
+        if not scanjs.dependencies():
+            sys.exit(5)
         ext = meta.by_id(id)
-        archives = []
+        result = {"retire": {}, "scanjs": {}}
         if ext is not None:
             for f in ext["current_version"]["files"]:
                 hash = f["hash"].split(":")[1]
-                archive_path = hash_fs.get(hash).abspath
-                unzip_path = os.path.join(folder, hash)
-                os.makedirs(unzip_path)
-                archives.append(unzip_path)
-                ex = webext.WebExtension(archive_path)
-                ex.unzip(unzip_path)
-        print(id, " ".join(archives))
-
+                archive_path_ref = hash_fs.get(hash)
+                if archive_path_ref is None:
+                    logger.warning("Missing zip file for ID %d, %s" % (id, hash))
+                else:
+                    we = webext.WebExtension(archive_path_ref.abspath)
+                    logger.info("Running retire.js scan on %d, %s" % (id, hash))
+                    retire.scan(extension=we)
+                    result["retire"][hash] = retire.result
+                    logger.info("Running scanjs scan on %d, %s" % (id, hash))
+                    scanjs.scan(extension=we)
+                    result["scanjs"][hash] = scanjs.result
+            print(json.dumps(result, indent=4))
+        else:
+            logger.critical("Missing extension for ID %d" % id)
 
     elif args.mode == "ipython":
         if len(args.modeargs[0]) == 0:

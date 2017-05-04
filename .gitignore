@@ -7,4 +7,5 @@ pip-selfcheck.json
 .idea/
 __pycache__/
 webextaware.egg-info/
+node_modules
 webext_hashfs

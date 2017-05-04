@@ -5,13 +5,11 @@
 import grequests
 from io import BytesIO
 import logging
-import pprint
 import requests
 
 
 logger = logging.getLogger(__name__)
 amo_server = "https://addons.mozilla.org"
-pp = pprint.PrettyPrinter(indent=4)
 
 
 def download_matedata(maximum=2<<31):
@@ -54,16 +52,7 @@ def update_files(metadata, hash_fs):
     for response in grequests.imap(unsent_requests, size=10):
         # original_url = response.history[0].url
         if response.status_code == 200:
-            pp.pprint(len(response.content))
+            logger.debug("Downloaded %d bytes" % len(response.content))
             hash_fs.put(BytesIO(response.content), ".zip")
         else:
             logger.error("Unable to download `%s`, status code %d" % (response.url, response.status_code))
-
-
-def do_something(metadata):
-    for ext in metadata:
-        pp.pprint(ext['current_version'])
-        # compat_url = amo_server + "/api/v3/addons/addon/%s/feature_compatibility/" % ext['id'])
-        zip_url = ext['current_version']['files'][0]['url']  # 0 might not be the latest public
-        pp.pprint(zip_url)
-    pp.pprint(len(metadata))
