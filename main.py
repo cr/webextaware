@@ -92,7 +92,7 @@ def main():
             meta = md.Metadata(filename=metadata_file)
         else:
             logger.info("Downloading current metadata set from AMO")
-            meta = md.Metadata(filename=metadata_file, data=amo.download_matedata())
+            meta = md.Metadata(filename=metadata_file, data=amo.download_matedata(), webext_only=True)
             meta.save()
         logger.info("Metadata set contains %d web extensions" % len(meta))
         logger.info("Downloading missing web extension files")
