@@ -11,13 +11,21 @@ logger = logging.getLogger(__name__)
 
 
 class Metadata(object):
-    def __init__(self, filename=None, data=[]):
+    def __init__(self, filename=None, data=[], webext_only=False):
         self.__data = data
         self.__filename = filename
         self.__id_index = {}
         self.__hash_index = {}
         if len(data) == 0 and filename is not None:
             self.load(filename)
+        if webext_only:
+            filtered_data = []
+            for ext in self.__data:
+                for f in ext["current_version"]["files"]:
+                    if f["is_webextension"]:
+                        filtered_data.append(ext)
+                        break
+            self.__data = filtered_data
         self.generate_index()
 
     def load(self, metadata_filename):

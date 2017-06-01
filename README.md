@@ -26,7 +26,8 @@ Sync all the AMO data with
 webextaware --debug sync
 ```
 
-You may run into an error about too many open files. In any case, re-run the following command until all you see are persistent 404 errors:
+You may run into AMO's occasional 504s or an error about too many open files. In any case, re-run the following
+command until all you get are persistent 404 errors:
 
 ```
 webextaware --debug -n sync
