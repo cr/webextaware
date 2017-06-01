@@ -49,7 +49,7 @@ def get_argparser():
     parser.add_argument('mode',
                         nargs='?',
                         choices=['info', 'sync', 'metadata', 'manifests', 'stats', 'get', 'unzip',
-                                 'scan', 'ipython'],
+                                 'scan', 'grep', 'ipython'],
                         help='run mode',
                         default='info')
     parser.add_argument('modeargs',
@@ -205,6 +205,48 @@ def main():
             print(json.dumps(result, indent=4))
         else:
             logger.critical("Missing extension for ID %d" % id)
+
+    elif args.mode == "grep":
+        if len(args.modeargs[0]) == 0:
+            logger.critical("Missing grep arguments")
+            sys.exit(-5)
+        where = []
+        # For now assume every trailing numeric argument is an AMO ID
+        for id in reversed(args.modeargs[0]):
+            if id == "*":
+                where.append("all")
+                break
+            elif id.isdigit():
+                where.append(int(id))
+            else:
+                break
+        grep_args = args.modeargs[0][:len(args.modeargs[0])-len(where)]
+        if len(where) == 0:
+            where = ["all"]
+        logger.debug("Grep args: %s" % grep_args)
+        logger.debug("Grepping in %s" % where)
+        meta = md.Metadata(filename=metadata_file)
+        if "all" in where:
+            search_ids = [ext["id"] for ext in meta]
+        else:
+            search_ids = where
+        color = sys.stdout.isatty()
+        for id in search_ids:
+            ext = meta.by_id(id)
+            if ext is not None:
+                for f in ext["current_version"]["files"]:
+                    hash = f["hash"].split(":")[1]
+                    archive_path_ref = hash_fs.get(hash)
+                    if archive_path_ref is None:
+                        logger.warning("Missing zip file for ID %d, %s" % (id, hash))
+                    else:
+                        we = webext.WebExtension(archive_path_ref.abspath)
+                        try:
+                            package_id = "%s%s%s" % (id, os.path.sep, hash)
+                            for line in we.grep(grep_args, color=color):
+                                print(line.replace("<%= PACKAGE_ID %>", package_id))
+                        finally:
+                            we.cleanup()
 
     elif args.mode == "ipython":
         if len(args.modeargs[0]) == 0:
