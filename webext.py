@@ -25,6 +25,10 @@ class WebExtension(object):
         self.unzip_folder = None
         self.unzip_folder_is_temp = False
 
+    def __str__(self):
+        manifest = self.manifest()
+        return "<WebExtension[%s-%s]>" % (manifest["name"], manifest["version"])
+
     def manifest(self):
         with self.zip.open("manifest.json", "r") as f:
             manifest = f.read()
@@ -163,6 +167,9 @@ class Manifest(object):
             # keys.sort()
             for key in keys:
                 self.traverse(ptr[key], path + '/' + key)
+
+    def __getitem__(self, key):
+        return self.json[key]
 
     def __str__(self):
         return json.dumps(self.json, indent=4)

@@ -51,7 +51,21 @@ class Metadata(object):
             for file_data in ext["current_version"]["files"]:
                 self.__hash_index[file_data["hash"].split(":")[1]] = ext
 
+    def is_known_id(self, id):
+        try:
+            id = int(id)
+        except ValueError:
+            return False
+        return id in self.__id_index
+
+    def is_known_hash(self, hash):
+        return hash in self.__hash_index
+
     def by_id(self, id):
+        try:
+            id = int(id)
+        except ValueError:
+            return None
         if id in self.__id_index:
             return self.__id_index[id]
         else:
@@ -63,6 +77,20 @@ class Metadata(object):
         else:
             return None
 
+    def id_to_hashes(self, id):
+        ext = self.by_id(id)
+        if ext is None:
+            return None
+        hashes = []
+        for f in ext["current_version"]["files"]:
+            if f["is_webextension"]:
+                assert f["hash"].startswith("sha256:")
+                hashes.append(f["hash"][7:])
+        return hashes
+
+    def hash_to_id(self, hash):
+        return self.by_hash(hash)["id"]
+
     def __iter__(self):
         for ext in self.__data:
             for f in ext["current_version"]["files"]:
@@ -72,7 +100,7 @@ class Metadata(object):
 
     def __len__(self):
         length = 0
-        for ext in self:
+        for _ in self:
             length += 1
         return length
 

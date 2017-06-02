@@ -42,6 +42,8 @@ def download_matedata(maximum=(2 << 31)):
                 logger.error("Unable to download `%s`, status code %d" % (response.url, response.status_code))
                 if 400 <= response.status_code < 500:
                     fatal_errors += 1
+            if len(pages_to_get) % 100 == 0:
+                logger.info("%d pages to go" % len(pages_to_get))
         if len(pages_to_get) == fatal_errors:
             break
 
@@ -70,6 +72,8 @@ def update_files(metadata, hash_fs):
                     logger.warning("Duplicate URL in metadata: %s" % ext_file["url"])
                 urls_to_get.append(ext_file["url"])
 
+    logger.info("Fetching %d uncached web extensions from AMO" % len(urls_to_get))
+
     while True:
         fatal_errors = 0
         unsent_requests = [grequests.get(url, verify=True) for url in urls_to_get]
@@ -87,6 +91,9 @@ def update_files(metadata, hash_fs):
                 logger.error("Unable to download `%s`, status code %d" % (response.url, response.status_code))
                 if 400 <= response.status_code < 500:
                     fatal_errors += 1
+            if len(urls_to_get) % 100 == 0:
+                logger.info("%d pages to go" % len(urls_to_get))
+
         if len(urls_to_get) == fatal_errors:
             break
 
