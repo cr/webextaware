@@ -12,10 +12,10 @@ pip install -e .
 
 As long as the virtualenv is active, the ```webextaware``` command is available.
 
-Install node dependencies (ignore npm warnings) with
+Install the node dependencies (ignore npm warnings) with
 
 ```
-npm install retire https://github.com/mozfreddyb/eslint-config-scanjs
+npm install
 ```
 
 ## Metadata update
@@ -23,24 +23,29 @@ npm install retire https://github.com/mozfreddyb/eslint-config-scanjs
 Sync all the AMO data with
 
 ```
-webextaware --debug sync
+webextaware sync
 ```
 
 You may run into AMO's occasional 504s or an error about too many open files. In any case, re-run the following
 command until all you get are persistent 404 errors:
 
 ```
-webextaware --debug -n sync
+webextaware -n sync
 ```
 
 ## Usage examples
 
-### info
+### info, query
 
 Get some info on the current set with
 
 ```
 webextaware info
+```
+
+Query the metadata for known hashes or IDs:
+
+```
 ```
 
 ### stats

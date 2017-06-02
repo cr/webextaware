@@ -48,7 +48,7 @@ def get_argparser():
                         default=False)
     parser.add_argument('mode',
                         nargs='?',
-                        choices=['info', 'sync', 'metadata', 'manifests', 'stats', 'get', 'unzip',
+                        choices=['info', 'query', 'sync', 'metadata', 'manifest', 'stats', 'get', 'unzip',
                                  'scan', 'grep', 'ipython'],
                         help='run mode',
                         default='info')
@@ -86,6 +86,16 @@ def main():
         print("Local metadata set: %d entries" % len(meta))
         print("Local web extension set: %d files" % len(hash_fs))
 
+    elif args.mode == "query":
+        meta = md.Metadata(filename=metadata_file)
+        for arg in args.modeargs[0]:
+            if meta.is_known_id(arg):
+                print("AMO ID %s is associated with %s" % (arg, " ".join(meta.id_to_hashes(arg))))
+            elif meta.is_known_hash(arg):
+                print("Hash %s belongs to AMO ID %d" % (arg, meta.hash_to_id(arg)))
+            else:
+                print("Unknown reference")
+
     elif args.mode == "sync":
         if args.noupdate:
             logger.warning("Using stored metadata, not updating")
@@ -95,7 +105,7 @@ def main():
             meta = md.Metadata(filename=metadata_file, data=amo.download_matedata(), webext_only=True)
             meta.save()
         logger.info("Metadata set contains %d web extensions" % len(meta))
-        logger.info("Downloading missing web extension files")
+        logger.info("Downloading web extensions")
         amo.update_files(meta, hash_fs)
 
     elif args.mode == "metadata":
@@ -106,7 +116,7 @@ def main():
         if len(args.modeargs[0]) == 0:
             todo_list = hashfs
         else:
-            todo_list = [int(id) for id in args.modeargs[0]]
+            todo_list = args.modeargs[0]
         all_exts = []
         for ext_file in todo_list:
             ext = webext.WebExtension(hash_fs.get(ext_file).abspath)
@@ -156,6 +166,8 @@ def main():
             ids = [ext["id"] for ext in meta]
         else:
             ids = [int(id)]
+        if len(ids) > 1:
+            logger.info("Unzipping %d web extensions")
         for id in ids:
             ext = meta.by_id(id)
             archives = []
@@ -249,19 +261,21 @@ def main():
                             we.cleanup()
 
     elif args.mode == "ipython":
+        import pprint
+        meta = md.Metadata(filename=metadata_file)
         if len(args.modeargs[0]) == 0:
             logger.critical("Missing ID")
-        meta = md.Metadata(filename=metadata_file)
-        id = int(args.modeargs[0][0])
-        ext = meta.by_id(id)
-        files = []
-        if ext is not None:
-            for f in ext["current_version"]["files"]:
-                hash = f["hash"].split(":")[1]
-                archive = hash_fs.get(hash).abspath
-                files.append(webext.WebExtension(archive))
-        print("id: %d" % id)
-        print("ext: %s" % ext)
-        print("files: %s" % files)
+        else:
+            id = int(args.modeargs[0][0])
+            ext = meta.by_id(id)
+            files = []
+            if ext is not None:
+                for f in ext["current_version"]["files"]:
+                    hash = f["hash"].split(":")[1]
+                    archive = hash_fs.get(hash).abspath
+                    files.append(webext.WebExtension(archive))
+                    print(json.dumps(ext, indent=4))
+            print("\nNumber files for extension ID: %d" % len(files))
+            print("file = %s\n" % [str(f) for f in files])
         from IPython import embed
         embed()
