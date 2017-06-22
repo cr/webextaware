@@ -5,7 +5,7 @@
 from setuptools import setup, find_packages
 
 PACKAGE_NAME = "webextaware"
-PACKAGE_VERSION = "1.0.0a1"
+PACKAGE_VERSION = "1.0.0a2"
 
 INSTALL_REQUIRES = [
     "coloredlogs",
@@ -28,7 +28,7 @@ DEV_REQUIRES = [
 ]
 
 setup(
-    name="webextaware",
+    name=PACKAGE_NAME,
     version=PACKAGE_VERSION,
     description="Mozilla WebExtensions Security Analyzer",
     classifiers=[
@@ -45,7 +45,7 @@ setup(
         "Topic :: Software Development :: Quality Assurance",
         "Topic :: Software Development :: Testing"
     ],
-    keywords=["mozilla", "firefox", "addons", "web extensions", "testing", "security"],
+    keywords=["mozilla", "firefox", "browser", "addons", "web extensions", "testing", "security"],
     author="Christiane Ruetten",
     author_email="cr@mozilla.com",
     url="https://github.com/cr/webextaware",

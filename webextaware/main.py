@@ -66,7 +66,7 @@ def check_npm_install(args):
     node_dir = os.path.join(args.workdir, "node")
     os.makedirs(node_dir, exist_ok=True)
     package_json = os.path.join(node_dir, "package.json")
-    module_package_json = pkgr.resource_filename(__name__, "../package.json")
+    module_package_json = pkgr.resource_filename(__name__, "package.json")
     if not os.path.exists(package_json) \
             or os.path.getmtime(package_json) < os.path.getmtime(module_package_json):
         shutil.copyfile(module_package_json, package_json)

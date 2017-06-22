@@ -2,6 +2,7 @@ bin
 include
 lib
 man
+dist
 pip-selfcheck.json
 .Python
 venv
