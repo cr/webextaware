@@ -49,7 +49,7 @@ class RetireScanner(Scanner):
         else:
             try:
                 cmd = ["npm", "bin"]
-                node_bin_path = subprocess.check_output(cmd).decode("utf-8").split()[0]
+                node_bin_path = subprocess.check_output(cmd, cwd=self.args["node_dir"]).decode("utf-8").split()[0]
             except FileNotFoundError:
                 logger.critical("Node Package Manager not found")
                 return False
@@ -66,7 +66,7 @@ class RetireScanner(Scanner):
         logger.debug("Using retire.js binary at `%s`" % retire_bin)
         cmd = [retire_bin, "--version"]
         try:
-            subprocess.check_call(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.check_call(cmd, cwd=self.args["node_dir"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except subprocess.CalledProcessError as e:
             logger.critical("Error running retire.js binary: `%s`" % str(e))
             return False
@@ -83,7 +83,8 @@ class RetireScanner(Scanner):
             extension.unzip(unzip_dir)
         cmd = [self.args["retire_bin"], "--outputformat", "json", "--path", unzip_dir]
         logger.debug("Running shell command `%s`" % " ".join(cmd))
-        cmd_output = subprocess.run(cmd, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE).stderr
+        cmd_output = subprocess.run(cmd, cwd=self.args["node_dir"], check=False, stdout=subprocess.PIPE,
+                                    stderr=subprocess.DEVNULL).stdout
         logger.debug("Shell command output: `%s`" % cmd_output)
         if rm_unzip_dir:
             shutil.rmtree(unzip_dir, ignore_errors=True)
@@ -109,9 +110,9 @@ class ScanJSScanner(Scanner):
         else:
             try:
                 cmd = ["npm", "bin"]
-                node_bin_path = subprocess.check_output(cmd).decode("utf-8").split()[0]
+                node_bin_path = subprocess.check_output(cmd, cwd=self.args["node_dir"]).decode("utf-8").split()[0]
                 cmd = ["npm", "root"]
-                node_root_path = subprocess.check_output(cmd).decode("utf-8").split()[0]
+                node_root_path = subprocess.check_output(cmd, cwd=self.args["node_dir"]).decode("utf-8").split()[0]
             except FileNotFoundError:
                 logger.critical("Node Package Manager not found")
                 return False
@@ -128,7 +129,7 @@ class ScanJSScanner(Scanner):
         logger.debug("Using eslint binary at `%s`" % eslint_bin)
         cmd = [eslint_bin, "--version"]
         try:
-            subprocess.check_call(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.check_call(cmd, cwd=self.args["node_dir"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except subprocess.CalledProcessError as e:
             logger.critical("Error running eslint binary: `%s`" % str(e))
             return False
@@ -159,7 +160,8 @@ class ScanJSScanner(Scanner):
                "-f", "json",
                unzip_dir]
         logger.debug("Running shell command `%s`" % " ".join(cmd))
-        cmd_output = subprocess.run(cmd, check=False, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL).stdout
+        cmd_output = subprocess.run(cmd, cwd=self.args["node_dir"], check=False, stdout=subprocess.PIPE,
+                                    stderr=subprocess.DEVNULL).stdout
         logger.debug("Shell command output: `%s`" % cmd_output)
         if rm_unzip_dir:
             shutil.rmtree(unzip_dir, ignore_errors=True)

@@ -10,12 +10,15 @@ import hashfs
 import json
 import logging
 import os
+import pkg_resources as pkgr
+import pynpm
+import shutil
 import sys
 
-import amo
-import metadata as md
-import scanner
-import webext
+import webextaware.amo as amo
+import webextaware.metadata as md
+import webextaware.scanner as scanner
+import webextaware.webext as webext
 
 
 # Initialize coloredlogs
@@ -57,6 +60,24 @@ def get_argparser():
                         action='append',
                         help='positional arguments for the run mode')
     return parser
+
+
+def check_npm_install(args):
+    node_dir = os.path.join(args.workdir, "node")
+    os.makedirs(node_dir, exist_ok=True)
+    package_json = os.path.join(node_dir, "package.json")
+    module_package_json = pkgr.resource_filename(__name__, "package.json")
+    if not os.path.exists(package_json) \
+            or os.path.getmtime(package_json) < os.path.getmtime(module_package_json):
+        shutil.copyfile(module_package_json, package_json)
+        try:
+            npm_pkg = pynpm.NPMPackage(os.path.abspath(package_json))
+            npm_pkg.install()
+        except FileNotFoundError:
+            logger.critical("Node Package Manager not found")
+            os.unlink(package_json)  # To trigger reinstall
+            return None
+    return node_dir
 
 
 # This is the entry point used in setup.py
@@ -188,14 +209,17 @@ def main():
             print(id, " ".join(archives))
 
     elif args.mode == "scan":
+        node_dir = check_npm_install(args)
+        if node_dir is None:
+            sys.exit(5)
         if len(args.modeargs[0]) == 0:
             logger.critical("Missing ID")
         id = int(args.modeargs[0][0])
         meta = md.Metadata(filename=metadata_file)
-        retire = scanner.RetireScanner()
+        retire = scanner.RetireScanner(node_dir=node_dir)
         if not retire.dependencies():
             sys.exit(5)
-        scanjs = scanner.ScanJSScanner()
+        scanjs = scanner.ScanJSScanner(node_dir=node_dir)
         if not scanjs.dependencies():
             sys.exit(5)
         ext = meta.by_id(id)
