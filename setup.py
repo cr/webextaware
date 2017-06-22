@@ -4,29 +4,62 @@
 
 from setuptools import setup, find_packages
 
-PACKAGE_VERSION = '0.0.1a'
+PACKAGE_NAME = "webextaware"
+PACKAGE_VERSION = "1.0.0a1"
 
-# Dependencies
-with open('requirements.txt') as f:
-    dependencies = f.read().splitlines()
+INSTALL_REQUIRES = [
+    "coloredlogs",
+    "grequests",
+    "hashfs",
+    "requests",
+    "python-magic"
+]
+
+TESTS_REQUIRE = [
+    "mock",
+    "nose"
+]
+
+DEV_REQUIRES = [
+    "ipython",
+    "mock",
+    "nose"
+]
 
 setup(
-    name='webextaware',
+    name="webextaware",
     version=PACKAGE_VERSION,
-    description='WebExtensions Security Analyzer',
-    classifiers=[],
-    keywords='mozilla',
-    author='Christiane Ruetten',
-    author_email='cr@mozilla.com',
-    url='https://github.com/cr/webextaware',
-    license='MPL',
-    packages=find_packages(),
-    include_package_data=True,
-    zip_safe=True,
-    install_requires=dependencies,
+    description="Mozilla WebExtensions Security Analyzer",
+    classifiers=[
+        "Environment :: Console",
+        "Development Status :: 5 - Production/Stable",
+        "Intended Audience :: Developers",
+        "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
+        "Natural Language :: English",
+        "Operating System :: MacOS :: MacOS X",
+        "Operating System :: POSIX :: Linux",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3 :: Only",
+        "Topic :: Security",
+        "Topic :: Software Development :: Quality Assurance",
+        "Topic :: Software Development :: Testing"
+    ],
+    keywords=["mozilla", "firefox", "addons", "web extensions", "testing", "security"],
+    author="Christiane Ruetten",
+    author_email="cr@mozilla.com",
+    url="https://github.com/cr/webextaware",
+    download_url="https://github.com/cr/webextaware/archive/latest.tar.gz",
+    license="MPL2",
+    packages=find_packages(exclude=["tests"]),
+    include_package_data=True,  # See MANIFEST.in
+    zip_safe=False,
+    use_2to3=False,
+    install_requires=INSTALL_REQUIRES,
+    tests_require=TESTS_REQUIRE,
+    extras_require={"dev": DEV_REQUIRES},  # For `pip install -e .[dev]`
     entry_points={
         "console_scripts": [
-            "webextaware = main:main"
+            "webextaware = webextaware.main:main"
         ]
     }
 )

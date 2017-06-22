@@ -8,6 +8,8 @@
   },
   "devDependencies": {},
   "scripts": {
+    "retire": "retire",
+    "eslint": "eslint",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
