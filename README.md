@@ -1,22 +1,37 @@
 # Web Extension Aware
 
-## Installation
+[![PyPI Package version](https://badge.fury.io/py/webextaware.svg)](https://pypi.python.org/pypi/webextaware)
+
+## Installation for users
+WebExtAware requires **Python 3** to run. If that's what you have, you're good to go:
+```
+$ pip install [--user] webextaware
+$ webextaware --help
+```
+
+Whether or not the `--user` flag is required depends on your Python installation. It is usually
+not required on Macs with Homebrew while most Linux distributions can't do without it.
+
+To use the `scan` sub command, you need to have a recent version of `node` and `npm` installed.
+Check that they are installed and available:
+```
+$ node --version
+v7.10.0
+$ npm --version
+4.2.0
+```
+
+## Installation for developers
 
 Locally clone the repo, then cd there. Create a virtualenv and install with
 
 ```
 virtualenv --always-copy --python=python3 venv
 . venv/bin/activate
-pip install -e .
+pip install -e .[dev]
 ```
 
 As long as the virtualenv is active, the ```webextaware``` command is available.
-
-Install the node dependencies (ignore npm warnings) with
-
-```
-npm install
-```
 
 ## Metadata update
 

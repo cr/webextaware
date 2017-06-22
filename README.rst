@@ -8,6 +8,6 @@ operations on them.
 
 --------
 
-The WebExtAware Python package has several non-Python dependencies that need to be satisfied for the script to run.
+The WebExtAware Python package has non-Python dependencies that need to be satisfied before the script can run.
 For installation instructions, usage information, and issue tracking, please visit the `Project Page
 <https://github.com/cr/webextaware>`_ on GitHub.

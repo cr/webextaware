@@ -1,6 +1,6 @@
 {
   "name": "webextaware",
-  "version": "1.0.0a2",
+  "version": "1.0.0a3",
   "description": "Dummy package for installing webextaware node dependencies",
   "dependencies": {
     "eslint-config-scanjs": "mozfreddyb/eslint-config-scanjs",
