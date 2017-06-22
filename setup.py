@@ -12,6 +12,7 @@ INSTALL_REQUIRES = [
     "grequests",
     "hashfs",
     "requests",
+    "pynpm",
     "python-magic"
 ]
 
@@ -32,7 +33,7 @@ setup(
     description="Mozilla WebExtensions Security Analyzer",
     classifiers=[
         "Environment :: Console",
-        "Development Status :: 5 - Production/Stable",
+        "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
         "Natural Language :: English",
