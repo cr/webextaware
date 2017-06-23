@@ -5,12 +5,13 @@
 from setuptools import setup, find_packages
 
 PACKAGE_NAME = "webextaware"
-PACKAGE_VERSION = "1.0.0a3"
+PACKAGE_VERSION = "1.0.0a4"
 
 INSTALL_REQUIRES = [
     "coloredlogs",
     "grequests",
     "hashfs",
+    "ipython",
     "requests",
     "pynpm",
     "python-magic"
@@ -22,7 +23,6 @@ TESTS_REQUIRE = [
 ]
 
 DEV_REQUIRES = [
-    "ipython",
     "mock",
     "nose"
 ]

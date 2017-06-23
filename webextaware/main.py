@@ -131,21 +131,45 @@ def main():
 
     elif args.mode == "metadata":
         meta = md.Metadata(filename=metadata_file)
-        print(json.dumps(meta.json(), sort_keys=True, indent=4))
+        if len(args.modeargs[0]) == 0 or "all" in args.modeargs[0]:
+            print(json.dumps(meta.data(), sort_keys=True, indent=4))
+        else:
+            amo_ids = list(map(int, args.modeargs[0]))
+            for metadata in meta:
+                if metadata["id"] in amo_ids:
+                    print(json.dumps(metadata, sort_keys=True, indent=4))
 
     elif args.mode == "manifest":
+        meta = md.Metadata(filename=metadata_file)
         if len(args.modeargs[0]) == 0:
             todo_list = hashfs
         else:
             todo_list = args.modeargs[0]
-        all_exts = []
-        for ext_file in todo_list:
-            ext = webext.WebExtension(hash_fs.get(ext_file).abspath)
+        ext_todo = []
+        for ext_id in todo_list:
+            if meta.is_known_hash(ext_id):
+                ext_todo.append(webext.WebExtension(hash_fs.get(ext_id).abspath))
+            elif meta.is_known_id(ext_id):
+                ext = meta.by_id(ext_id)
+                for f in ext["current_version"]["files"]:
+                    hash_id = f["hash"].split(":")[1]
+                    archive_path_ref = hash_fs.get(hash_id)
+                    if archive_path_ref is None:
+                        logger.warning("Missing zip file for ID %d, %s" % (ext_id, hash_id))
+                    else:
+                        archive_path = archive_path_ref.abspath
+                        ex = webext.WebExtension(archive_path)
+                        ext_todo.append(ex)
+            else:
+                logger.warning("Unknown reference `%s`" % ext_id)
+                continue
+
+        for ext in ext_todo:
             try:
-                all_exts.append(ext.manifest().json)
+                print(ext.manifest())
             except json.decoder.JSONDecodeError:
+                logger.warning("Manifest can't be decoded for extension")
                 pass
-        print(json.dumps(all_exts, indent=4))
 
     elif args.mode == "stats":
         meta = md.Metadata(filename=metadata_file)
@@ -165,48 +189,48 @@ def main():
         if len(args.modeargs[0]) == 0:
             logger.critical("Missing ID")
         meta = md.Metadata(filename=metadata_file)
-        for id in args.modeargs[0]:
-            id = int(id)
-            ext = meta.by_id(id)
+        for amo_id in args.modeargs[0]:
+            amo_id = int(amo_id)
+            ext = meta.by_id(amo_id)
             if ext is not None:
                 for f in ext["current_version"]["files"]:
-                    hash = f["hash"].split(":")[1]
-                    archive = hash_fs.get(hash).abspath
-                    print(id, archive)
+                    hash_id = f["hash"].split(":")[1]
+                    archive = hash_fs.get(hash_id).abspath
+                    print(amo_id, archive)
 
     elif args.mode == "unzip":
         if len(args.modeargs[0]) == 0:
             logger.critical("Missing ID")
-        id = args.modeargs[0][0]
+        amo_id = args.modeargs[0][0]
         if len(args.modeargs[0]) >= 2:
             folder = args.modeargs[0][1]
         else:
             folder = "/tmp"
         meta = md.Metadata(filename=metadata_file)
-        if id == "all" or id == "*":
+        if amo_id == "all" or amo_id == "*":
             ids = [ext["id"] for ext in meta]
         else:
-            ids = [int(id)]
+            ids = [int(amo_id)]
         if len(ids) > 1:
             logger.info("Unzipping %d web extensions")
-        for id in ids:
-            ext = meta.by_id(id)
+        for amo_id in ids:
+            ext = meta.by_id(amo_id)
             archives = []
             if ext is not None:
-                ext_unzip_folder = os.path.join(folder, "%d" % id)
+                ext_unzip_folder = os.path.join(folder, "%d" % amo_id)
                 for f in ext["current_version"]["files"]:
-                    hash = f["hash"].split(":")[1]
-                    archive_path_ref = hash_fs.get(hash)
+                    hash_id = f["hash"].split(":")[1]
+                    archive_path_ref = hash_fs.get(hash_id)
                     if archive_path_ref is None:
-                        logger.warning("Missing zip file for ID %d, %s" % (id, hash))
+                        logger.warning("Missing zip file for ID %d, %s" % (amo_id, hash_id))
                     else:
                         archive_path = archive_path_ref.abspath
-                        unzip_path = os.path.join(ext_unzip_folder, hash)
-                        os.makedirs(unzip_path)
+                        unzip_path = os.path.join(ext_unzip_folder, hash_id)
+                        os.makedirs(unzip_path, exist_ok=True)
                         archives.append(unzip_path)
                         ex = webext.WebExtension(archive_path)
                         ex.unzip(unzip_path)
-            print(id, " ".join(archives))
+            print(amo_id, " ".join(archives))
 
     elif args.mode == "scan":
         node_dir = check_npm_install(args)
@@ -214,7 +238,7 @@ def main():
             sys.exit(5)
         if len(args.modeargs[0]) == 0:
             logger.critical("Missing ID")
-        id = int(args.modeargs[0][0])
+        amo_id = int(args.modeargs[0][0])
         meta = md.Metadata(filename=metadata_file)
         retire = scanner.RetireScanner(node_dir=node_dir)
         if not retire.dependencies():
@@ -222,25 +246,25 @@ def main():
         scanjs = scanner.ScanJSScanner(node_dir=node_dir)
         if not scanjs.dependencies():
             sys.exit(5)
-        ext = meta.by_id(id)
+        ext = meta.by_id(amo_id)
         result = {"retire": {}, "scanjs": {}}
         if ext is not None:
             for f in ext["current_version"]["files"]:
-                hash = f["hash"].split(":")[1]
-                archive_path_ref = hash_fs.get(hash)
+                hash_id = f["hash"].split(":")[1]
+                archive_path_ref = hash_fs.get(hash_id)
                 if archive_path_ref is None:
-                    logger.warning("Missing zip file for ID %d, %s" % (id, hash))
+                    logger.warning("Missing zip file for ID %d, %s" % (amo_id, hash_id))
                 else:
                     we = webext.WebExtension(archive_path_ref.abspath)
-                    logger.info("Running retire.js scan on %d, %s" % (id, hash))
+                    logger.info("Running retire.js scan on %d, %s" % (amo_id, hash_id))
                     retire.scan(extension=we)
-                    result["retire"][hash] = retire.result
-                    logger.info("Running scanjs scan on %d, %s" % (id, hash))
+                    result["retire"][hash_id] = retire.result
+                    logger.info("Running scanjs scan on %d, %s" % (amo_id, hash_id))
                     scanjs.scan(extension=we)
-                    result["scanjs"][hash] = scanjs.result
+                    result["scanjs"][hash_id] = scanjs.result
             print(json.dumps(result, indent=4))
         else:
-            logger.critical("Missing extension for ID %d" % id)
+            logger.critical("Missing extension for ID %d" % amo_id)
 
     elif args.mode == "grep":
         if len(args.modeargs[0]) == 0:
@@ -248,12 +272,12 @@ def main():
             sys.exit(-5)
         where = []
         # For now assume every trailing numeric argument is an AMO ID
-        for id in reversed(args.modeargs[0]):
-            if id == "*":
+        for amo_id in reversed(args.modeargs[0]):
+            if amo_id == "*":
                 where.append("all")
                 break
-            elif id.isdigit():
-                where.append(int(id))
+            elif amo_id.isdigit():
+                where.append(int(amo_id))
             else:
                 break
         grep_args = args.modeargs[0][:len(args.modeargs[0])-len(where)]
@@ -267,18 +291,18 @@ def main():
         else:
             search_ids = where
         color = sys.stdout.isatty()
-        for id in search_ids:
-            ext = meta.by_id(id)
+        for amo_id in search_ids:
+            ext = meta.by_id(amo_id)
             if ext is not None:
                 for f in ext["current_version"]["files"]:
-                    hash = f["hash"].split(":")[1]
-                    archive_path_ref = hash_fs.get(hash)
+                    hash_id = f["hash"].split(":")[1]
+                    archive_path_ref = hash_fs.get(hash_id)
                     if archive_path_ref is None:
-                        logger.warning("Missing zip file for ID %d, %s" % (id, hash))
+                        logger.warning("Missing zip file for ID %d, %s" % (amo_id, hash_id))
                     else:
                         we = webext.WebExtension(archive_path_ref.abspath)
                         try:
-                            package_id = "%s%s%s" % (id, os.path.sep, hash)
+                            package_id = "%s%s%s" % (amo_id, os.path.sep, hash_id)
                             for line in we.grep(grep_args, color=color):
                                 print(line.replace("<%= PACKAGE_ID %>", package_id))
                         finally:
@@ -290,13 +314,13 @@ def main():
         if len(args.modeargs[0]) == 0:
             logger.critical("Missing ID")
         else:
-            id = int(args.modeargs[0][0])
-            ext = meta.by_id(id)
+            amo_id = int(args.modeargs[0][0])
+            ext = meta.by_id(amo_id)
             files = []
             if ext is not None:
                 for f in ext["current_version"]["files"]:
-                    hash = f["hash"].split(":")[1]
-                    archive = hash_fs.get(hash).abspath
+                    hash_id = f["hash"].split(":")[1]
+                    archive = hash_fs.get(hash_id).abspath
                     files.append(webext.WebExtension(archive))
                     print(json.dumps(ext, indent=4))
             print("\nNumber files for extension ID: %d" % len(files))

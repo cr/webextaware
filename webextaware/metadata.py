@@ -28,6 +28,9 @@ class Metadata(object):
             self.__data = filtered_data
         self.generate_index()
 
+    def data(self):
+        return self.__data
+
     def load(self, metadata_filename):
         global logger
         try:
@@ -51,34 +54,34 @@ class Metadata(object):
             for file_data in ext["current_version"]["files"]:
                 self.__hash_index[file_data["hash"].split(":")[1]] = ext
 
-    def is_known_id(self, id):
+    def is_known_id(self, amo_id):
         try:
-            id = int(id)
+            amo_id = int(amo_id)
         except ValueError:
             return False
-        return id in self.__id_index
+        return amo_id in self.__id_index
 
-    def is_known_hash(self, hash):
-        return hash in self.__hash_index
+    def is_known_hash(self, hash_id):
+        return hash_id in self.__hash_index
 
-    def by_id(self, id):
+    def by_id(self, amo_id):
         try:
-            id = int(id)
+            amo_id = int(amo_id)
         except ValueError:
             return None
-        if id in self.__id_index:
-            return self.__id_index[id]
+        if amo_id in self.__id_index:
+            return self.__id_index[amo_id]
         else:
             return None
 
-    def by_hash(self, hash):
-        if hash in self.__hash_index:
-            return self.__hash_index[hash]
+    def by_hash(self, hash_id):
+        if hash_id in self.__hash_index:
+            return self.__hash_index[hash_id]
         else:
             return None
 
-    def id_to_hashes(self, id):
-        ext = self.by_id(id)
+    def id_to_hashes(self, amo_id):
+        ext = self.by_id(amo_id)
         if ext is None:
             return None
         hashes = []
@@ -88,8 +91,8 @@ class Metadata(object):
                 hashes.append(f["hash"][7:])
         return hashes
 
-    def hash_to_id(self, hash):
-        return self.by_hash(hash)["id"]
+    def hash_to_id(self, hash_id):
+        return self.by_hash(hash_id)["id"]
 
     def __iter__(self):
         for ext in self.__data:
