@@ -1,0 +1,7 @@
+global-exclude *.py[co]
+global-exclude __pycache__
+include LICENSE.txt
+include README.rst
+include webextaware/package.json
+exclude README.md
+exclude tests/*

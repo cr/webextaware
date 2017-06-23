@@ -30,7 +30,7 @@ class Scanner(object):
         return self.result is None
 
     def wait(self):
-        while self.is_running():
+        while self.is_scanning():
             sleep(0.1)
         return self.result()
 
@@ -84,7 +84,7 @@ class RetireScanner(Scanner):
         cmd = [self.args["retire_bin"], "--outputformat", "json", "--path", unzip_dir]
         logger.debug("Running shell command `%s`" % " ".join(cmd))
         cmd_output = subprocess.run(cmd, cwd=self.args["node_dir"], check=False, stdout=subprocess.PIPE,
-                                    stderr=subprocess.DEVNULL).stdout
+                                    stderr=subprocess.STDOUT).stdout
         logger.debug("Shell command output: `%s`" % cmd_output)
         if rm_unzip_dir:
             shutil.rmtree(unzip_dir, ignore_errors=True)
@@ -105,14 +105,18 @@ class ScanJSScanner(Scanner):
     def dependencies(self):
         global logger
         self.result = {}
+        try:
+            cmd = ["npm", "root"]
+            node_root_path = subprocess.check_output(cmd, cwd=self.args["node_dir"]).decode("utf-8").split()[0]
+        except FileNotFoundError:
+            logger.critical("Node Package Manager not found")
+            return False
         if "eslint_bin" in self.args:
             eslint_bin = self.args["eslint_bin"]
         else:
             try:
                 cmd = ["npm", "bin"]
                 node_bin_path = subprocess.check_output(cmd, cwd=self.args["node_dir"]).decode("utf-8").split()[0]
-                cmd = ["npm", "root"]
-                node_root_path = subprocess.check_output(cmd, cwd=self.args["node_dir"]).decode("utf-8").split()[0]
             except FileNotFoundError:
                 logger.critical("Node Package Manager not found")
                 return False
@@ -133,7 +137,7 @@ class ScanJSScanner(Scanner):
         except subprocess.CalledProcessError as e:
             logger.critical("Error running eslint binary: `%s`" % str(e))
             return False
-        eslint_rc = os.path.join(node_root_path, "eslint-config-scanjs", ".eslintrc" )
+        eslint_rc = os.path.join(node_root_path, "eslint-config-scanjs", ".eslintrc")
         logger.debug("Checking `%s`" % eslint_rc)
         if not os.path.isfile(eslint_rc):
             logger.critical("You must install the `eslint-plugin-scanjs-rules` node module")

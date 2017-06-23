@@ -21,7 +21,7 @@ def download_matedata(maximum=(2 << 31)):
     metadata = []
 
     first_page = requests.get(url, verify=True).json()
-    num_pages = math.ceil(first_page["count"]/first_page["page_size"])
+    num_pages = int(math.ceil(first_page["count"]/first_page["page_size"]))
     logger.info("Fetching %d pages of AMO metadata" % num_pages)
     pages_to_get = ["%s&page=%d" % (url, n) for n in range(1, num_pages + 1)]
 
@@ -92,7 +92,7 @@ def update_files(metadata, hash_fs):
                 if 400 <= response.status_code < 500:
                     fatal_errors += 1
             if len(urls_to_get) % 100 == 0:
-                logger.info("%d pages to go" % len(urls_to_get))
+                logger.info("%d extensions to go" % len(urls_to_get))
 
         if len(urls_to_get) == fatal_errors:
             break
