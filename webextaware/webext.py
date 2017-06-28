@@ -2,13 +2,10 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import chardet
 import fnmatch
 import json
 import logging
-import magic
 import os
-import re
 import shutil
 import subprocess
 import tempfile
@@ -77,37 +74,6 @@ class WebExtension(object):
                 matches.append(file_name)
         return matches
 
-    def file_types(self):
-        result = {}
-        for f, zo in self.zipped_files():
-            result[zo.filename] = file_type(f)
-        return result
-
-    def match(self, pattern):
-        result = {}
-        for zip_obj in self.zip.filelist:
-            filename = zip_obj.filename
-            regex = re.compile(pattern)
-            if not filename.endswith('/'):  # is not directory
-                with self.zip.open(filename) as f:
-                    ft = file_type(f)
-                if ft["mime_type"].startswith("text/") or "xml" in ft["mime_type"]:
-                    with self.zip.open(filename) as f:
-                        all_bytes = f.read()
-                        charset = chardet.detect(all_bytes)["encoding"]
-                        all_string = all_bytes.decode(charset)
-                        for line in all_string.splitlines():
-                            if regex.match(line):
-                                if filename not in result:
-                                    if len(line) > 160:
-                                        line = line[:160] + "..."
-                                    result[filename] = [line]
-                                else:
-                                    result[filename].append(line)
-                else:
-                    logger.warning("Skipping `%s`: grepping in binary files is not supported" % filename)
-        return result
-
     def grep(self, grep_args, color=False):
         folder = self.unzip()
         if color:
@@ -131,19 +97,6 @@ class WebExtension(object):
                     logger.warning("Unexpected grep output: `%s`" % line)
                 results.append("%s: Binary file matches" % filename.replace(folder, "<%= PACKAGE_ID %>"))
         return results
-
-
-magic_text = magic.Magic(mime=False, uncompress=False)
-magic_mime = magic.Magic(mime=True, uncompress=False)
-
-
-def file_type(f):
-    global magic_text, magic_mime
-    buf = f.read(4096)
-    return {
-        "mime_type": magic_mime.from_buffer(buf),
-        "description": magic_text.from_buffer(buf)
-    }
 
 
 class Manifest(object):

@@ -2,6 +2,12 @@
 
 [![PyPI Package version](https://badge.fury.io/py/webextaware.svg)](https://pypi.python.org/pypi/webextaware)
 
+
+## Requirements
+WebExtAware depends on other command line tools and Python modules, some of which require
+libraries for building. You need to ensure that the following dependencies are met:
+* grep
+
 ## Installation for users
 WebExtAware requires **Python 3** to run. If that's what you have, you're good to go:
 ```
