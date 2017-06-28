@@ -2,12 +2,14 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 
+from distutils.spawn import find_executable
 import fnmatch
 import json
 import logging
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import zipfile
 
@@ -21,6 +23,13 @@ class WebExtension(object):
         self.zip = zipfile.ZipFile(filename)
         self.unzip_folder = None
         self.unzip_folder_is_temp = False
+        self.grep_exe = find_executable("grep")
+        if self.grep_exe is None:
+            self.grep_exe = find_executable("grep.exe")
+        if self.grep_exe is None:
+            logger.debug("Can't find the `grep` binary.")
+        else:
+            logger.debug("Using `%s` for grepping." % self.grep_exe)
 
     def __str__(self):
         manifest = self.manifest()
@@ -80,7 +89,10 @@ class WebExtension(object):
             color_arg = ["--color=always"]
         else:
             color_arg = ["--color=never"]
-        cmd = ["grep", "-E"] + color_arg + grep_args + ["-r", folder]
+        if self.grep_exe is None:
+            logger.critical("Can't find the `grep` binary.")
+            sys.exit(5)
+        cmd = [self.grep_exe, "-E"] + color_arg + grep_args + ["-r", folder]
         logger.debug("Running shell command `%s`" % " ".join(cmd))
         grep_result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if grep_result.stderr is not None and len(grep_result.stderr) > 0:
