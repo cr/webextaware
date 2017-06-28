@@ -32,10 +32,11 @@ def get_argparser():
     Argument parsing
     :return: Argument parser object
     """
+    pkg_version = pkgr.require("webextaware")[0].version
     home = os.path.expanduser('~')
 
     parser = argparse.ArgumentParser(prog="webextaware")
-    parser.add_argument('--version', action='version', version='%(prog)s 0.0.1a')
+    parser.add_argument('--version', action='version', version='%(prog)s ' + pkg_version)
     parser.add_argument('-d', '--debug',
                         help='Enable debug',
                         action='store_true',
