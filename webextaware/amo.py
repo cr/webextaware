@@ -80,7 +80,12 @@ def update_files(metadata, hash_fs):
         for response in grequests.imap(unsent_requests, size=10):
             if response.status_code == 200:
                 logger.debug("Downloaded %d bytes from `%s`" % (len(response.content), response.url))
-                hash_fs.put(BytesIO(response.content), ".zip")
+                try:
+                    hash_fs.put(BytesIO(response.content), ".zip")
+                except ValueError as err:
+                    # probably the mysterious ValueError: embedded null byte
+                    logger.error("Unable to store `%s` in local cache: %s" % (response.url, str(err)))
+                    continue
                 try:
                     original_url = response.history[0].url
                 except IndexError:
@@ -98,4 +103,4 @@ def update_files(metadata, hash_fs):
             break
 
     if len(urls_to_get) > 0:
-        logger.warning("Unable to fetch %d extensions, likely permanent errors" % len(urls_to_get))
+        logger.warning("Unable to fetch %d extensions, likely deleted add-ons" % len(urls_to_get))
