@@ -3,13 +3,14 @@
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 
 from distutils.spawn import find_executable
+from collections import OrderedDict
 import fnmatch
 import json
+import jsoncfg
 import logging
 import os
 import shutil
 import subprocess
-import sys
 import tempfile
 import zipfile
 
@@ -26,16 +27,19 @@ class WebExtension(object):
         self.grep_exe = find_executable("grep")
         if self.grep_exe is None:
             self.grep_exe = find_executable("grep.exe")
-        if self.grep_exe is None:
-            logger.debug("Can't find the `grep` binary.")
-        else:
-            logger.debug("Using `%s` for grepping." % self.grep_exe)
 
     def __str__(self):
         manifest = self.manifest()
         return "<WebExtension[%s-%s]>" % (manifest["name"], manifest["version"])
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.cleanup()
+
     def manifest(self):
+        logger.debug("Preparing manifest for %s" % self.zip.filename)
         with self.zip.open("manifest.json", "r") as f:
             manifest = f.read()
         return Manifest(manifest)
@@ -50,9 +54,6 @@ class WebExtension(object):
             if not filename.endswith('/'):  # is not directory
                 with self.zip.open(filename) as f:
                     yield f, zip_obj
-
-    def extracted_files(self):
-        pass
 
     def unzip(self, unzip_folder=None):
         if self.unzip_folder is not None and os.path.isdir(self.unzip_folder):
@@ -84,14 +85,14 @@ class WebExtension(object):
         return matches
 
     def grep(self, grep_args, color=False):
-        folder = self.unzip()
+        if self.grep_exe is None:
+            logger.critical("Can't find the `grep` binary.")
+            return None
         if color:
             color_arg = ["--color=always"]
         else:
             color_arg = ["--color=never"]
-        if self.grep_exe is None:
-            logger.critical("Can't find the `grep` binary.")
-            sys.exit(5)
+        folder = self.unzip()
         cmd = [self.grep_exe, "-E"] + color_arg + grep_args + ["-r", folder]
         logger.debug("Running shell command `%s`" % " ".join(cmd))
         grep_result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -114,27 +115,59 @@ class WebExtension(object):
 class Manifest(object):
 
     def __init__(self, content):
+        self.raw = content
         try:
-            self.json = json.loads(content.decode('utf-8-sig'))
-        except ValueError as e:
+            utf_content = content.decode('utf-8-sig')
+        except UnicodeDecodeError as e:
+            # This should not be happening, but AMO lists several
+            # extensions with non-standard manifest encoding.
+            logger.warning("Unicode error in manifest: %s: %s" % (repr(content), str(e)))
             self.json = None
-            logger.error("Manifest can't be parsed: %s" % content)
-            raise e
+            return
 
-    def traverse(self, ptr=None, path=u''):
+        try:
+            self.json = json.loads(utf_content)
+        except ValueError as e:
+            # There is lots of broken JSON in the wild. Most are using comments,
+            # so will retry with a more relaxed parser.
+            self.json = None
+            logger.debug("Manifest can't be regularly parsed: %s: %s" % (repr(utf_content), str(e)))
+
+        if self.json is None:
+            logger.debug("Retrying with relaxed parser")
+            try:
+                self.json = jsoncfg.loads(utf_content)
+            except jsoncfg.parser.JSONConfigParserException as e:
+                # Give up when even relaxed parsing does not work.
+                logger.error("Manifest can't be parsed: %s" % str(e))
+                self.json = None
+
+    def traverse(self, ptr=None, path=""):
+        lines = []
+        if self.json is None:
+            logger.critical("None")
+            return lines
         if ptr is None:
             ptr = self.json
-        if type(ptr) is str:
-            s = path + ': ' + ptr
-            print(s)
-        elif type(ptr) is dict:
-            keys = ptr.keys()
-            # keys.sort()
-            for key in keys:
-                self.traverse(ptr[key], path + '/' + key)
+        if type(ptr) is dict or type(ptr) is OrderedDict:
+            for key in ptr.keys():
+                lines += self.traverse(ptr=ptr[key], path="/".join([path, key]))
+        elif type(ptr) is list:
+            for item in ptr:
+                lines += self.traverse(ptr=item, path=path)
+        else:
+            lines.append(":".join([path, repr(ptr)]))
+        return lines
 
-    def __getitem__(self, key):
-        return self.json[key]
+    def __getitem__(self, item):
+        if self.json is None:
+            raise KeyError
+        return self.json[item]
+
+    def __contains__(self, item):
+        if self.json is None:
+            return False
+        return item in self.json
 
     def __str__(self):
         return json.dumps(self.json, indent=4)

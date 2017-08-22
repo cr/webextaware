@@ -15,10 +15,12 @@ logger = logging.getLogger(__name__)
 
 
 class Scanner(object):
+
+    name = "dummy"
+
     def __init__(self, **kwargs):
         self.args = kwargs
         self.result = None
-        self.scanner = "dummy"
 
     def dependencies(self):
         return True
@@ -35,11 +37,25 @@ class Scanner(object):
         return self.result()
 
 
+def __subclasses_of(cls):
+    sub_classes = cls.__subclasses__()
+    sub_sub_classes = []
+    for sub_cls in sub_classes:
+        sub_sub_classes += __subclasses_of(sub_cls)
+    return sub_classes + sub_sub_classes
+
+
+def list_scanners():
+    """Return a list of all scanners"""
+    return dict([(scanner.name, scanner) for scanner in __subclasses_of(Scanner)])
+
+
 class RetireScanner(Scanner):
+
+    name = "retire"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.scanner = "retire"
 
     def dependencies(self):
         global logger
@@ -88,7 +104,12 @@ class RetireScanner(Scanner):
         logger.debug("Shell command output: `%s`" % cmd_output)
         if rm_unzip_dir:
             shutil.rmtree(unzip_dir, ignore_errors=True)
-        result = json.loads(cmd_output.decode("utf-8"))
+        try:
+            result = json.loads(cmd_output.decode("utf-8"))
+        except json.decoder.JSONDecodeError:
+            logger.warning("retirejs call failed, probably due to network failure")
+            self.result = None
+            return
         # Make file paths relative
         for r in result:
             if r["file"].startswith(unzip_dir):
@@ -98,13 +119,13 @@ class RetireScanner(Scanner):
 
 class ScanJSScanner(Scanner):
 
+    name = "scanjs"
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.scanner = "scanjs"
 
     def dependencies(self):
         global logger
-        self.result = {}
         try:
             cmd = ["npm", "root"]
             node_root_path = subprocess.check_output(cmd, cwd=self.args["node_dir"]).decode("utf-8").split()[0]
@@ -170,7 +191,7 @@ class ScanJSScanner(Scanner):
         if rm_unzip_dir:
             shutil.rmtree(unzip_dir, ignore_errors=True)
         if len(cmd_output) == 0:
-            self.result = []
+            self.result = None
         else:
             result = json.loads(cmd_output.decode("utf-8"))
             for r in result:

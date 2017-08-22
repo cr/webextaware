@@ -5,38 +5,44 @@
 import bz2
 import json
 import logging
+import os
 
 
 logger = logging.getLogger(__name__)
 
 
+def get_metadata_file(args):
+    return os.path.join(args.workdir, "amo_metadata.json.bz2")
+
+
 class Metadata(object):
-    def __init__(self, filename=None, data=[], webext_only=False):
-        self.__data = data
+    def __init__(self, filename=None, data=None, webext_only=True):
+        self.__ext = []
+        if data is not None:
+            for e in data:
+                ext = Extension(e)
+                if ext.is_webextension():
+                    self.__ext.append(ext)
         self.__filename = filename
-        self.__id_index = {}
         self.__hash_index = {}
-        if len(data) == 0 and filename is not None:
+        self.__id_index = {}
+        if data is None and filename is not None:
             self.load(filename)
         if webext_only:
-            filtered_data = []
-            for ext in self.__data:
-                for f in ext["current_version"]["files"]:
-                    if f["is_webextension"]:
-                        filtered_data.append(ext)
-                        break
-            self.__data = filtered_data
+            self.__ext = list(filter(lambda ex: ex.is_webextension(), self.__ext))
         self.generate_index()
 
-    def data(self):
-        return self.__data
+    def raw_data(self):
+        return self.__ext
 
     def load(self, metadata_filename):
         global logger
+        self.__ext = []
         try:
             with bz2.open(metadata_filename, "r") as f:
                 logger.debug("Retrieving metadata state from `%s`" % metadata_filename)
-                self.__data = json.load(f)
+                for e in json.load(f):
+                    self.__ext.append(Extension(e))
         except FileNotFoundError:
             logger.warning("No metadata state stored in `%s`" % metadata_filename)
 
@@ -44,87 +50,95 @@ class Metadata(object):
         global logger
         logger.debug("Writing metadata state to `%s`" % self.__filename)
         with bz2.open(self.__filename, "w") as f:
-            f.write(json.dumps(self.__data).encode("utf-8"))
+            f.write(json.dumps(self.__ext).encode("utf-8"))
 
     def generate_index(self):
         self.__id_index = {}
         self.__hash_index = {}
-        for ext in self.__data:
-            self.__id_index[ext["id"]] = ext
-            for file_data in ext["current_version"]["files"]:
-                self.__hash_index[file_data["hash"].split(":")[1]] = ext
+        for ext in self.__ext:
+            self.__id_index[ext.id] = ext
+            for h in ext.file_hashes():
+                self.__hash_index[h] = ext
 
     def is_known_id(self, amo_id):
         try:
             amo_id = int(amo_id)
-        except ValueError:
+        except (ValueError, TypeError):
             return False
         return amo_id in self.__id_index
 
     def is_known_hash(self, hash_id):
         return hash_id in self.__hash_index
 
-    def by_id(self, amo_id):
+    def get_by_id(self, amo_id):
         try:
             amo_id = int(amo_id)
-        except ValueError:
+        except (ValueError, TypeError):
             return None
         if amo_id in self.__id_index:
             return self.__id_index[amo_id]
         else:
             return None
 
-    def by_hash(self, hash_id):
+    def get_by_hash(self, hash_id):
         if hash_id in self.__hash_index:
             return self.__hash_index[hash_id]
         else:
             return None
 
+    def get(self, amo_or_hash_id):
+        if self.is_known_id(amo_or_hash_id):
+            return self.get_by_id(amo_or_hash_id)
+        elif self.is_known_hash(amo_or_hash_id):
+            return self.get_by_hash(amo_or_hash_id)
+        else:
+            return None
+
     def id_to_hashes(self, amo_id):
-        ext = self.by_id(amo_id)
+        ext = self.get_by_id(amo_id)
         if ext is None:
             return None
-        hashes = []
-        for f in ext["current_version"]["files"]:
-            if f["is_webextension"]:
-                assert f["hash"].startswith("sha256:")
-                hashes.append(f["hash"][7:])
-        return hashes
+        return [h for h in ext.file_hashes()]
 
     def hash_to_id(self, hash_id):
-        return self.by_hash(hash_id)["id"]
+        return self.get_by_hash(hash_id).id
 
     def __iter__(self):
-        for ext in self.__data:
-            for f in ext["current_version"]["files"]:
-                if f["is_webextension"]:
-                    yield ext
-                    break
+        for ext in self.__ext:
+            yield ext
 
     def __len__(self):
-        length = 0
-        for _ in self:
-            length += 1
-        return length
+        return len(self.__ext)
+
+    def iter_files(self):
+        for ext in self:
+            for f in ext.files:
+                yield f
 
 
-class Extension(object):
+class Extension(dict):
     __language_priority = ['en-US', 'en-GB', 'uk', 'de', 'fr', 'pl', 'es', 'it', 'nl']
 
-    def __init__(self, ext):
-        self.__ext = ext
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
+    @property
+    def id(self):
+        return self["id"]
+
+    @property
     def name(self):
         for lang in self.__language_priority:
-            if lang in self.__ext["name"]:
-                return self.__ext["name"][lang]
-        lang = list(self.__ext["name"].keys())[0]
-        return self.__ext["name"][lang]
+            if lang in self["name"]:
+                return self["name"][lang]
+        lang = list(self["name"].keys())[0]
+        return self["name"][lang]
 
+    @property
     def permissions(self):
         aggregate_api_permissions = set()
         aggregate_host_permissions = set()
-        for f in self.__ext["current_version"]["files"]:
+        for f in self["current_version"]["files"]:
             for p in f["permissions"]:
                 if "/" in p or ":" in p or "<" in p:
                     aggregate_host_permissions.add(p)
@@ -135,3 +149,25 @@ class Extension(object):
         if len(aggregate_api_permissions) == 0:
             aggregate_api_permissions = None
         return aggregate_host_permissions, aggregate_api_permissions
+
+    def is_webextension(self):
+        if "current_version" not in self:
+            return False
+        for f in self["current_version"]["files"]:
+            if f["is_webextension"]:
+                return True
+        return False
+
+    def files(self, webext_only=True):
+        if "current_version" not in self or "files" not in self["current_version"]:
+            return
+        for f in self["current_version"]["files"]:
+            if f["is_webextension"] or not webext_only:
+                yield f
+
+    def file_hashes(self, webext_only=True):
+        for f in self.files(webext_only=webext_only):
+            yield f["hash"].split(":")[1]
+
+    def __iter__(self):
+        return self.files()

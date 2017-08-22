@@ -51,14 +51,22 @@ You may run into AMO's occasional 504s or an error about too many open files. In
 command until all you get are persistent 404 errors:
 
 ```
-webextaware -n sync
+webextaware sync -n
 ```
 
 ## Usage examples
 
+Most commands accept selectors for selecting packages. Valid selectors are:
+
+* any AMO ID like *737717*
+* any extension file ID (sha256 hashes) like *2c8fc1861903551dac72bdbe9ec389bff8c417ba7217f6c738ac8d968939fc30*
+* the keyword *all* for selecting everything the whole metadata set
+* the keyword *orphans* for selecting extensions not referenced by the metadata set
+* a regular expression that is matched against extension names
+
 ### info, query
 
-Get some info on the current set with
+Get some info on the cache state with
 
 ```
 webextaware info
@@ -67,11 +75,12 @@ webextaware info
 Query the metadata for known hashes or IDs:
 
 ```
+webextaware query 835644
 ```
 
 ### stats
 
-Print a tab-separated CSV with stats for all the extensions with
+Write CSV with stats for all the extensions to terminal with
 
 ```
 webextaware stats
@@ -79,24 +88,31 @@ webextaware stats
 
 ### manifest, get, unzip
 
-Show the manifests and paths of zip archives associated with a specific AMO ID and
+Show the manifests and paths of cache files associated with a specific AMO ID and
 unzip them to the /tmp folder with
 
 ```
 webextaware manifest 728674
 webextaware get 728674
-webextaware unzip 728674 /tmp
+webextaware unzip 728674 -o /tmp
 ```
 
 The last command prints a list of extracted folders.
 
+Pass `-r` to the `manifest` subcommand to dump raw manifests. Pass `-t` to the manifest command
+to get manifests in a grep-friendly line-based format.
+
+```
+webextaware manifest all -t | grep /optional_permissions:
+```
+
 You can unzip all the extensions to a specific folder with
 
 ```
-webextaware unzip all /tmp/exts
+webextaware unzip all -o /tmp/exts
 ```
 
-It will print a list of AMO IDS and folders where the extensions were extracted.
+It will print a list of folders where the extensions were extracted.
 
 ### grep
 
