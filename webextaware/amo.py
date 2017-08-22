@@ -7,21 +7,20 @@ from io import BytesIO
 import logging
 import math
 import requests
-import sys
 
 
 logger = logging.getLogger(__name__)
 amo_server = "https://addons.mozilla.org"
 
 
-def download_matedata(maximum=(2 << 31)):
+def download_metadata(max_pages=(2 << 31), max_ext=(2 << 31)):
     global logger
 
     url = amo_server + "/api/v3/addons/search/?sort=created&type=extension"
     metadata = []
 
     first_page = requests.get(url, verify=True).json()
-    num_pages = int(math.ceil(first_page["count"]/first_page["page_size"]))
+    num_pages = min(max_pages, int(math.ceil(first_page["count"]/first_page["page_size"])))
     logger.info("Fetching %d pages of AMO metadata" % num_pages)
     pages_to_get = ["%s&page=%d" % (url, n) for n in range(1, num_pages + 1)]
 
@@ -49,9 +48,9 @@ def download_matedata(maximum=(2 << 31)):
 
     if len(pages_to_get) > 0:
         logger.error("Unable to fetch %d pages. Please try again later later" % len(pages_to_get))
-        sys.exit(10)
+        return None
 
-    return metadata[0:min(len(metadata), maximum)]
+    return metadata[0:min(len(metadata), max_ext)]
 
 
 def __as_chunks(flat_list, chunk_size):
