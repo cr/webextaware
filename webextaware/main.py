@@ -68,7 +68,9 @@ def main():
 
     # Adjust file limits
     from_limit = resource.getrlimit(resource.RLIMIT_NOFILE)
-    to_limit = (10000, from_limit[1])
+    (soft_limit, hard_limit) = from_limit
+    soft_limit = min(10000, hard_limit)
+    to_limit = (soft_limit, hard_limit)
     logger.debug("Raising open file limit from %s to %s" % (repr(from_limit), repr(to_limit)))
     resource.setrlimit(resource.RLIMIT_NOFILE, to_limit)
 
