@@ -23,8 +23,8 @@ class UnzipMode(RunMode):
     def setup_args(parser):
         parser.add_argument("-o", "--outdir",
                             action="store",
-                            default="/tmp/ext",
-                            help="root path for extraction (default: /tmp/ext)")
+                            default="./ext",
+                            help="root path for extraction (default: ./ext)")
 
         parser.add_argument("selectors",
                             metavar="selector",
