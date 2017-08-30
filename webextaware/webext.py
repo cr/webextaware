@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class WebExtension(object):
 
     def __init__(self, filename):
-        self.zip = zipfile.ZipFile(filename)
+        self.filename = filename
         self.unzip_folder = None
         self.unzip_folder_is_temp = False
         self.grep_exe = find_executable("grep")
@@ -38,22 +38,18 @@ class WebExtension(object):
     def __exit__(self, *args):
         self.cleanup()
 
+    def _open_ZipFile(self):
+        return zipfile.ZipFile(self.filename)
+
     def manifest(self):
-        logger.debug("Preparing manifest for %s" % self.zip.filename)
-        with self.zip.open("manifest.json", "r") as f:
-            manifest = f.read()
+        logger.debug("Preparing manifest for %s" % self.filename)
+        with self._open_ZipFile() as z:
+            manifest = z.read("manifest.json")
         return Manifest(manifest)
 
     def ls(self):
-        for zip_obj in self.zip.filelist:
-            yield zip_obj.filename
-
-    def zipped_files(self):
-        for zip_obj in self.zip.filelist:
-            filename = zip_obj.filename
-            if not filename.endswith('/'):  # is not directory
-                with self.zip.open(filename) as f:
-                    yield f, zip_obj
+        with self._open_ZipFile() as z:
+            return z.namelist()
 
     def unzip(self, unzip_folder=None):
         if self.unzip_folder is not None and os.path.isdir(self.unzip_folder):
@@ -65,7 +61,8 @@ class WebExtension(object):
             self.unzip_folder = unzip_folder
             self.unzip_folder_is_temp = False
         os.makedirs(self.unzip_folder, exist_ok=True)
-        self.zip.extractall(self.unzip_folder)
+        with self._open_ZipFile() as z:
+            z.extractall(self.unzip_folder)
         return self.unzip_folder
 
     def is_unzipped(self):

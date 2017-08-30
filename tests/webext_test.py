@@ -20,7 +20,7 @@ def test_webext_object():
             assert_true("manifest.json" in w.ls(), "each has manifest.json")
             manifest = w.manifest()
             assert_true(type(manifest) is we.Manifest, "can yield Manifest objects")
-            zipped_names = [z.filename for f, z in w.zipped_files()]
+            zipped_names = w.ls()
             assert_true("manifest.json" in zipped_names, "manifest.json is among zipped_files")
 
 
