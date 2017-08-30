@@ -29,6 +29,15 @@ class GrepMode(RunMode):
                             action="append",
                             help="grep arguments")
 
+    def setup(self):
+        if not super().setup():
+            return False
+        if webext.WebExtension.grep_exe is None:
+            logger.critical("Missing `grep` binary")
+            return False
+        logger.debug("Using `%s` for grepping" % webext.WebExtension.grep_exe)
+        return True
+
     def run(self):
         where = []
         # For now assume every trailing numeric argument is an AMO ID
@@ -57,7 +66,7 @@ class GrepMode(RunMode):
                     hash_id = f["hash"].split(":")[1]
                     archive_path_ref = self.files.get(hash_id)
                     if archive_path_ref is None:
-                        logger.warning("Missing zip file for ID %d, %s" % (amo_id, hash_id))
+                        logger.warning("Missing zip file for ID %s, %s" % (amo_id, hash_id))
                     else:
                         we = webext.WebExtension(archive_path_ref.abspath)
                         try:
