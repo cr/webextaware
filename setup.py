@@ -5,7 +5,7 @@
 from setuptools import setup, find_packages
 
 PACKAGE_NAME = "webextaware"
-PACKAGE_VERSION = "1.1.0a1"
+PACKAGE_VERSION = "1.1.0a2"
 
 INSTALL_REQUIRES = [
     "coloredlogs",
@@ -37,8 +37,8 @@ setup(
     version=PACKAGE_VERSION,
     description="Mozilla WebExtensions Security Analyzer",
     classifiers=[
-        "Environment :: Console",
         "Development Status :: 4 - Beta",
+        "Environment :: Console",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
         "Natural Language :: English",
@@ -48,7 +48,8 @@ setup(
         "Programming Language :: Python :: 3 :: Only",
         "Topic :: Security",
         "Topic :: Software Development :: Quality Assurance",
-        "Topic :: Software Development :: Testing"
+        "Topic :: Software Development :: Testing",
+        "Topic :: Utilities"
     ],
     keywords=["mozilla", "firefox", "browser", "addons", "web extensions", "testing", "security"],
     author="Christiane Ruetten",
@@ -62,6 +63,7 @@ setup(
     use_2to3=False,
     install_requires=INSTALL_REQUIRES,
     tests_require=TESTS_REQUIRE,
+    test_suite='nose.collector',
     extras_require={"dev": DEV_REQUIRES},  # For `pip install -e .[dev]`
     entry_points={
         "console_scripts": [

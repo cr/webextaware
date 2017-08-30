@@ -47,7 +47,7 @@ Sync all the AMO data with
 webextaware sync
 ```
 
-You may run into AMO's occasional 504s or an error about too many open files. In any case, re-run the following
+You may run into AMO's occasional 504s. In any case, re-run the following
 command until all you get are persistent 404 errors:
 
 ```
@@ -60,7 +60,7 @@ Most commands accept selectors for selecting packages. Valid selectors are:
 
 * any AMO ID like *737717*
 * any extension file ID (sha256 hashes) like *2c8fc1861903551dac72bdbe9ec389bff8c417ba7217f6c738ac8d968939fc30*
-* the keyword *all* for selecting everything the whole metadata set
+* the keyword *all* for selecting the whole metadata set
 * the keyword *orphans* for selecting extensions not referenced by the metadata set
 * a regular expression that is matched against extension names
 
