@@ -11,6 +11,7 @@ import requests
 
 logger = logging.getLogger(__name__)
 amo_server = "https://addons.mozilla.org"
+MAX_CONCURRENT_REQUESTS = 10
 
 
 def download_metadata(max_pages=(2 << 31), max_ext=(2 << 31)):
@@ -24,10 +25,12 @@ def download_metadata(max_pages=(2 << 31), max_ext=(2 << 31)):
     logger.info("Fetching %d pages of AMO metadata" % num_pages)
     pages_to_get = ["%s&page=%d" % (url, n) for n in range(1, num_pages + 1)]
 
+    session = create_request_Session()
+
     while True:
         fatal_errors = 0
-        unsent_requests = [grequests.get(url, verify=True) for url in pages_to_get]
-        for response in grequests.imap(unsent_requests, size=10):
+        unsent_requests = [grequests.get(url, verify=True, session=session) for url in pages_to_get]
+        for response in grequests.imap(unsent_requests, size=MAX_CONCURRENT_REQUESTS):
             if 200 <= response.status_code < 400:
                 logger.debug("Downloaded %d bytes from `%s`" % (len(response.content), response.url))
                 metadata += response.json()["results"]
@@ -73,10 +76,12 @@ def update_files(metadata, hash_fs):
 
     logger.info("Fetching %d uncached web extensions from AMO" % len(urls_to_get))
 
+    session = create_request_Session()
+
     while True:
         fatal_errors = 0
-        unsent_requests = [grequests.get(url, verify=True) for url in urls_to_get]
-        for response in grequests.imap(unsent_requests, size=10):
+        unsent_requests = [grequests.get(url, verify=True, session=session) for url in urls_to_get]
+        for response in grequests.imap(unsent_requests, size=MAX_CONCURRENT_REQUESTS):
             if response.status_code == 200:
                 logger.debug("Downloaded %d bytes from `%s`" % (len(response.content), response.url))
                 try:
@@ -103,3 +108,11 @@ def update_files(metadata, hash_fs):
 
     if len(urls_to_get) > 0:
         logger.warning("Unable to fetch %d extensions, likely deleted add-ons" % len(urls_to_get))
+
+
+def create_request_Session():
+    # Share connections between requests to avoid overusing file descriptors.
+    a = requests.adapters.HTTPAdapter(pool_maxsize=MAX_CONCURRENT_REQUESTS)
+    session = requests.Session()
+    session.mount('https://', a)
+    return session
