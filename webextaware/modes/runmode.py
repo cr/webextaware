@@ -74,6 +74,8 @@ class RunMode(object):
         if self.db is None:
             self.db = db.Database(self.args, files=self.files, metadata=self.meta)
 
+        return True
+
     def run(self):
         """
         Executes the the steps that constitutes the actual run.
@@ -122,7 +124,9 @@ def run(args):
 
     try:
         logger.debug("Running mode .setup()")
-        current_mode.setup()
+        if not current_mode.setup():
+            logger.critical("Setup failed")
+            return 10
         logger.debug("Running mode .run()")
         result = current_mode.run()
 

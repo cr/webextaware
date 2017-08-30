@@ -11,7 +11,7 @@ libraries for building. You need to ensure that the following dependencies are m
 ## Installation for users
 WebExtAware requires **Python 3** to run. If that's what you have, you're good to go:
 ```
-$ pip install [--user] webextaware
+$ pip3 install [--user] webextaware
 $ webextaware --help
 ```
 

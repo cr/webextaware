@@ -20,13 +20,14 @@ logger = logging.getLogger(__name__)
 
 class WebExtension(object):
 
+    grep_exe = find_executable("grep")
+    if grep_exe is None:
+        grep_exe = find_executable("grep.exe")
+
     def __init__(self, filename):
         self.filename = filename
         self.unzip_folder = None
         self.unzip_folder_is_temp = False
-        self.grep_exe = find_executable("grep")
-        if self.grep_exe is None:
-            self.grep_exe = find_executable("grep.exe")
 
     def __str__(self):
         manifest = self.manifest()
@@ -142,7 +143,7 @@ class Manifest(object):
     def traverse(self, ptr=None, path=""):
         lines = []
         if self.json is None:
-            logger.critical("None")
+            logger.warning("Manifest contains invalid JSON")
             return lines
         if ptr is None:
             ptr = self.json
