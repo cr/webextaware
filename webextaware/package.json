@@ -4,6 +4,7 @@
   "description": "Dummy package for installing webextaware node dependencies",
   "dependencies": {
     "eslint-config-scanjs": "mozfreddyb/eslint-config-scanjs",
+    "eslint-plugin-no-unsafe-innerhtml": "*",
     "eslint": "3",
     "retire": "^1.3.1"
   },
