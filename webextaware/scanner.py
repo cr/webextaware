@@ -88,7 +88,7 @@ class RetireScanner(Scanner):
             return False
         return True
 
-    def scan(self, unzip_dir=None, extension=None):
+    def scan(self, unzip_dir=None, extension=None, verbose=False):
         global logger
         if unzip_dir is None:
             unzip_dir = tempfile.mkdtemp()
@@ -97,10 +97,14 @@ class RetireScanner(Scanner):
             rm_unzip_dir = False
         if extension is not None:
             extension.unzip(unzip_dir)
-        cmd = [self.args["retire_bin"], "--outputformat", "json", "--path", unzip_dir]
+        cmd = [self.args["retire_bin"], "--outputformat", "json", "--outputpath", "/dev/stdout",
+               "--js", "--jspath", unzip_dir]
+        if verbose:
+            # List all detected frameworks, not just vulnerable
+            cmd.append("--verbose")
         logger.debug("Running shell command `%s`" % " ".join(cmd))
         cmd_output = subprocess.run(cmd, cwd=self.args["node_dir"], check=False, stdout=subprocess.PIPE,
-                                    stderr=subprocess.STDOUT).stdout
+                                    stderr=subprocess.DEVNULL).stdout
         logger.debug("Shell command output: `%s`" % cmd_output)
         if rm_unzip_dir:
             shutil.rmtree(unzip_dir, ignore_errors=True)
@@ -108,10 +112,13 @@ class RetireScanner(Scanner):
             result = json.loads(cmd_output.decode("utf-8"))
         except json.decoder.JSONDecodeError:
             logger.warning("retirejs call failed, probably due to network failure")
+            logger.warning("Failing output is `%s`" % cmd_output)
             self.result = None
             return
         # Make file paths relative
         for r in result:
+            if "file" not in r:
+                continue
             if r["file"].startswith(unzip_dir):
                 r["file"] = os.path.relpath(r["file"], start=unzip_dir)
         self.result = result
@@ -193,7 +200,14 @@ class ScanJSScanner(Scanner):
         if len(cmd_output) == 0:
             self.result = None
         else:
-            result = json.loads(cmd_output.decode("utf-8"))
+            try:
+                result = json.loads(cmd_output.decode("utf-8"))
+            except json.decoder.JSONDecodeError as err:
+                logger.error("Failed to decode eslint output: %s" % str(err))
+                logger.error("Failing output: %s" % cmd_output)
+                self.result = None
+                return
+
             for r in result:
                 # Make file paths relative
                 if r["filePath"].startswith(unzip_dir):

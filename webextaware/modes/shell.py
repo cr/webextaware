@@ -31,15 +31,15 @@ class ShellMode(RunMode):
         parser.add_argument("selectors",
                             metavar="selector",
                             nargs="*",
-                            action="append",
-                            help="AMO IDs, extension IDs, regexp, `all`, `orphans`")
+                            default=["all"],
+                            help="AMO IDs, extension IDs, regexp, `orphans`, `all` (default)")
 
     def run(self):
 
-        if len(self.args.selectors[0]) == 0:
-            matches = self.db.match("all")
-        else:
-            matches = self.db.match(self.args.ids[0])
+        matches = self.db.match(self.args.selectors)
+        if len(matches) == 0:
+            logger.warning("No results")
+            return 10
 
         # Just for convenience
         meta = self.meta

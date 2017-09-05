@@ -23,13 +23,13 @@ class MetaaMode(RunMode):
     def setup_args(parser):
         parser.add_argument("selectors",
                             metavar="selector",
-                            nargs="+",
-                            action="append",
-                            help="AMO IDs, extension IDs, regexp, `all`, `orphans`")
+                            nargs="*",
+                            default=["all"],
+                            help="AMO IDs, extension IDs, regexp, `orphans`, `all` (default)")
 
     def run(self):
         result = 0
-        meta = self.db.get_meta(self.args.selectors[0])
+        meta = self.db.get_meta(self.args.selectors)
         if len(meta) == 0:
             logger.warning("No results")
             result = 10

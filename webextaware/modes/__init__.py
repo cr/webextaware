@@ -5,6 +5,7 @@
 from . import get
 from . import grep
 from . import info
+from . import libs
 from . import manifest
 from . import meta
 from . import query

@@ -82,7 +82,7 @@ class Database(object):
                 selection[amo_id].add(selector)
             else:
                 try:
-                    m = re.compile(selector)
+                    m = re.compile(selector, re.IGNORECASE)
                 except re.error:
                     logger.error("Invalid selector `%s`" % selector)
                     continue

@@ -82,16 +82,18 @@ class WebExtension(object):
                 matches.append(file_name)
         return matches
 
-    def grep(self, grep_args, color=False):
+    def grep(self, regexp, grep_args=None, color=False):
         if self.grep_exe is None:
             logger.critical("Can't find the `grep` binary.")
             return None
+        if grep_args is None:
+            grep_args = []
         if color:
             color_arg = ["--color=always"]
         else:
             color_arg = ["--color=never"]
         folder = self.unzip()
-        cmd = [self.grep_exe, "-E"] + color_arg + grep_args + ["-r", folder]
+        cmd = [self.grep_exe, "-E"] + [regexp] + grep_args + color_arg + ["-r", folder]
         logger.debug("Running shell command `%s`" % " ".join(cmd))
         grep_result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if grep_result.stderr is not None and len(grep_result.stderr) > 0:

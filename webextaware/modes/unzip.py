@@ -23,17 +23,16 @@ class UnzipMode(RunMode):
     def setup_args(parser):
         parser.add_argument("-o", "--outdir",
                             action="store",
-                            default="./ext",
-                            help="root path for extraction (default: ./ext)")
+                            default="ext",
+                            help="root path for extraction (default: $PWD/ext)")
 
         parser.add_argument("selectors",
                             metavar="selector",
                             nargs="+",
-                            action="append",
-                            help="AMO IDs, extension IDs, regexp, `all`, `orphans`")
+                            help="AMO IDs, extension IDs, regexp, `orphans`, `all`")
 
     def run(self):
-        exts = self.db.get_ext(self.args.selectors[0])
+        exts = self.db.get_ext(self.args.selectors)
         if len(exts) == 0:
             logger.warning("No results")
             return 10
