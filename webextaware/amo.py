@@ -14,10 +14,11 @@ amo_server = "https://addons.mozilla.org"
 MAX_CONCURRENT_REQUESTS = 10
 
 
-def download_metadata(max_pages=(2 << 31), max_ext=(2 << 31)):
+def download_metadata(max_pages=(2 << 31), max_ext=(2 << 31), page_size=25):
     global logger
 
-    url = amo_server + "/api/v3/addons/search/?sort=created&type=extension"
+    # Maximum page_size seems to be 50 right now, 25 is AMO's current default.
+    url = amo_server + "/api/v3/addons/search/?sort=created&type=extension&page_size=%d" % page_size
     metadata = []
 
     first_page = requests.get(url, verify=True).json()
@@ -25,7 +26,7 @@ def download_metadata(max_pages=(2 << 31), max_ext=(2 << 31)):
     logger.info("Fetching %d pages of AMO metadata" % num_pages)
     pages_to_get = ["%s&page=%d" % (url, n) for n in range(1, num_pages + 1)]
 
-    session = create_request_Session()
+    session = create_request_session()
 
     while True:
         fatal_errors = 0
@@ -44,7 +45,7 @@ def download_metadata(max_pages=(2 << 31), max_ext=(2 << 31)):
                 logger.error("Unable to download `%s`, status code %d" % (response.url, response.status_code))
                 if 400 <= response.status_code < 500:
                     fatal_errors += 1
-            if len(pages_to_get) % 100 == 0:
+            if len(pages_to_get) % 25 == 0:
                 logger.info("%d pages to go" % len(pages_to_get))
         if len(pages_to_get) == fatal_errors:
             break
@@ -66,7 +67,7 @@ def update_files(metadata, hash_fs):
     for ext in metadata:
         for ext_file in ext["current_version"]["files"]:
             if not ext_file["is_webextension"]:
-                break
+                continue
             ext_file_hash_type, ext_file_hash = ext_file["hash"].split(":")
             assert ext_file_hash_type == "sha256"
             if hash_fs.get(ext_file_hash) is None:
@@ -76,7 +77,7 @@ def update_files(metadata, hash_fs):
 
     logger.info("Fetching %d uncached web extensions from AMO" % len(urls_to_get))
 
-    session = create_request_Session()
+    session = create_request_session()
 
     while True:
         fatal_errors = 0
@@ -110,7 +111,7 @@ def update_files(metadata, hash_fs):
         logger.warning("Unable to fetch %d extensions, likely deleted add-ons" % len(urls_to_get))
 
 
-def create_request_Session():
+def create_request_session():
     # Share connections between requests to avoid overusing file descriptors.
     a = requests.adapters.HTTPAdapter(pool_maxsize=MAX_CONCURRENT_REQUESTS)
     session = requests.Session()

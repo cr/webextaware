@@ -120,10 +120,13 @@ Grep for a regular expression in all or specific extensions with
 
 ```
 webextaware grep optional_permissions
-webextaware grep -- -A5 optional_permissions 739662
+webextaware grep optional_permissions 739662 -A 10
 ```
 
-You can pass arguments to grep after a double dash.
+The `grep` subcommand is equivalent to `grep -E <args> -r <extension dir>`.
+Any arguments following the regular expression and package selectors will be
+passed transparently to grep. If you need more fancy grepping capabilities or a
+huge performance boost, consider to `webextaware unzip all` first.
 
 ### scan
 
@@ -134,3 +137,15 @@ webextaware scan 739662
 ```
 
 The result is formatted in JSON.
+
+### libs
+
+Get some framework / libraries statistics with
+
+```
+webextaware libs amazon -e
+webextaware libs -H
+```
+
+The former syntax provides the data in JSON format and groups libraries per extension.
+The latter syntax provides complete library statistics in a human-readable format.

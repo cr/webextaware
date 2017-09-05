@@ -33,8 +33,7 @@ class MetadataMode(RunMode):
         parser.add_argument("selectors",
                             metavar="selector",
                             nargs="+",
-                            action="append",
-                            help="AMO IDs, extension IDs, regexp, `all`, `orphans`")
+                            help="AMO IDs, extension IDs, regexp, `orphans`, `all`")
 
     @staticmethod
     def check_args(args):
@@ -47,7 +46,7 @@ class MetadataMode(RunMode):
     def run(self):
         global logger
 
-        exts = self.db.get_ext(self.args.selectors[0])
+        exts = self.db.get_ext(self.args.selectors)
         if len(exts) == 0:
             logger.warning("No results")
             return 10

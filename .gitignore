@@ -9,5 +9,6 @@ venv
 .idea/
 __pycache__/
 webextaware.egg-info/
+.eggs/
 node_modules
 webext_hashfs

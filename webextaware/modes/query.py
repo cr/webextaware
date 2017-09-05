@@ -24,11 +24,10 @@ class QueryMode(RunMode):
         parser.add_argument("ids",
                             metavar="selector",
                             nargs="+",
-                            action="append",
-                            help="AMO IDs, extension IDs, regexp, `all`, `orphans`")
+                            help="AMO IDs, extension IDs, regexp, `orphans`, `all`")
 
     def run(self):
-        matches = self.db.match(self.args.ids[0])
+        matches = self.db.match(self.args.ids)
         if len(matches) == 0:
             logger.warning("No results")
             return 10
