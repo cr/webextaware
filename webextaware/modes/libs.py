@@ -12,6 +12,7 @@ import shutil
 
 from .runmode import RunMode
 from .. import scanner
+from ..webext import traverse
 
 
 logger = logging.getLogger(__name__)
@@ -30,6 +31,10 @@ class LibsMode(RunMode):
         parser.add_argument("-e", "--perext",
                             action="store_true",
                             help="use web extension-centric output format")
+
+        parser.add_argument("-t", "--traverse",
+                            action="store_true",
+                            help="produce a grep-friendly output format")
 
         parser.add_argument("-H", "--human",
                             action="store_true",
@@ -66,7 +71,16 @@ class LibsMode(RunMode):
         if self.args.perext:
             if self.args.human:
                 logger.warning("Human-readable output not implemented for per-extension results")
-            print(json.dumps(results, indent=4))
+            # Remove entries with empty results
+            for amo_id in results:
+                for ext_id in results[amo_id]:
+                    results[amo_id][ext_id] = list(filter(lambda r: "results" in r and len(r["results"]) > 0,
+                                                          results[amo_id][ext_id]))
+            if not self.args.traverse:
+                print(json.dumps(results, indent=4))
+            else:
+                for line in traverse(results):
+                    print(line.lstrip("/"))
 
         else:
             components = by_components(results)

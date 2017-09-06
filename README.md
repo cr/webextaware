@@ -149,3 +149,4 @@ webextaware libs -H
 
 The former syntax provides the data in JSON format and groups libraries per extension.
 The latter syntax provides complete library statistics in a human-readable format.
+There is also a `--traverse` mode for `--perext` (in short `-et`) to provide a grep-friendly format.
