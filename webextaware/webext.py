@@ -142,22 +142,11 @@ class Manifest(object):
                 logger.error("Manifest can't be parsed: %s" % str(e))
                 self.json = None
 
-    def traverse(self, ptr=None, path=""):
-        lines = []
+    def traverse(self):
         if self.json is None:
             logger.warning("Manifest contains invalid JSON")
-            return lines
-        if ptr is None:
-            ptr = self.json
-        if type(ptr) is dict or type(ptr) is OrderedDict:
-            for key in ptr.keys():
-                lines += self.traverse(ptr=ptr[key], path="/".join([path, key]))
-        elif type(ptr) is list:
-            for item in ptr:
-                lines += self.traverse(ptr=item, path=path)
-        else:
-            lines.append(":".join([path, repr(ptr)]))
-        return lines
+            return []
+        return list(traverse(self.json))
 
     def __getitem__(self, item):
         if self.json is None:
@@ -171,3 +160,18 @@ class Manifest(object):
 
     def __str__(self):
         return json.dumps(self.json, indent=4)
+
+
+def traverse(obj, ptr=None, path=""):
+    if ptr is None:
+        ptr = obj
+    if type(ptr) is dict or type(ptr) is OrderedDict:
+        for key in ptr.keys():
+            for line in traverse(obj, ptr=ptr[key], path="%s/%s" % (path, key)):
+                yield line
+    elif type(ptr) is list:
+        for item in ptr:
+            for line in traverse(obj, ptr=item, path=path):
+                yield line
+    else:
+        yield ":".join([path, repr(ptr)])
