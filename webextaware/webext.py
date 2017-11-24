@@ -101,7 +101,12 @@ class WebExtension(object):
         if grep_result.stdout is None or len(grep_result.stdout) == 0:
             return []
         results = []
-        for line in grep_result.stdout.decode("utf-8").splitlines():
+        try:
+            decoded_result = grep_result.stdout.decode("utf-8")
+        except UnicodeDecodeError as err:
+            logger.warning("Error decoding grep results in `%s`: %s" % (self.unzip_folder, err))
+            return results
+        for line in decoded_result.splitlines():
             if line.startswith(folder):
                 results.append(line.replace(folder, "<%= PACKAGE_ID %>"))
             elif line.startswith("Binary file ") and line.endswith(" matches"):
