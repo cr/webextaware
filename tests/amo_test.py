@@ -16,7 +16,7 @@ def test_amo_metadata_downloader():
     # Operates on data pre-downloaded by tests.__init__.setup_package()
     meta = tests.raw_meta
     assert_true(type(meta) is list and type(meta[0]) is dict, "delivers expected format")
-    assert_equal(len(meta), 50, "delivers expected number of extensions")
+    assert_equal(len(meta), 100, "delivers expected number of extensions")
     assert_true("id" in meta[0] and "current_version" in meta[0] and "files" in meta[0]["current_version"],
                 "metadata entries have expected format")
     assert_true(meta[0]["current_version"]["files"][0]["hash"].startswith("sha256:"), "hashes are SHA256")

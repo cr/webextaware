@@ -15,6 +15,13 @@ def get_metadata_file(args):
     return os.path.join(args.workdir, "amo_metadata.json.bz2")
 
 
+def create_directory_path(amo_id, ext_id, base=None):
+    if base is None:
+        return os.path.join(amo_id, ext_id)
+    else:
+        return os.path.join(base, amo_id, ext_id)
+
+
 class Metadata(object):
     def __init__(self, filename=None, data=None, webext_only=True):
         self.__ext = []
