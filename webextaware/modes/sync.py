@@ -33,9 +33,9 @@ class SyncMode(RunMode):
         else:
             logger.info("Downloading current metadata set from AMO")
             self.meta = md.Metadata(filename=md.get_metadata_file(self.args),
-                                    data=amo.download_metadata(page_size=100), webext_only=True)
+                                    data=amo.download_metadata(), webext_only=True)
             self.meta.save()
-        logger.info("Metadata set contains %d web extensions" % len(self.meta))
+        logger.info("Downloaded metadata set contains %d web extensions" % len(self.meta))
         logger.info("Downloading missing web extensions")
         amo.update_files(self.meta, self.files)
         return 0

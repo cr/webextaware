@@ -14,20 +14,33 @@ amo_server = "https://addons.mozilla.org"
 MAX_CONCURRENT_REQUESTS = 10
 
 
-def download_metadata(max_pages=(2 << 31), max_ext=(2 << 31), page_size=25):
+def download_metadata(max_pages=(2 << 31), max_ext=(2 << 31), page_size=50):
     global logger
 
     # Maximum page_size seems to be 50 right now, 25 is AMO's current default.
-    url = amo_server + "/api/v3/addons/search/?sort=created&type=extension&page_size=%d" % page_size
-    metadata = []
+    url = amo_server + "/api/v3/addons/search/"
+    search_params = "sort=created" \
+        "&type=extension" \
+        "&app=firefox" \
+        "&appversion=" + ",".join(map(str, range(57, 75))) + \
+        "&page_size=%d" % page_size
+    logger.debug("Search parameters for AMO query: %s" % search_params)
 
-    first_page = requests.get(url, verify=True).json()
-    num_pages = min(max_pages, int(math.ceil(first_page["count"]/first_page["page_size"])))
+    # Grab page_size and count from first result page and calculate num_pages from that
+    first_page = requests.get("%s?%s" % (url, search_params), verify=True).json()
+    logger.info("There are currently %d web extensions listed" % first_page["count"])
+    supported_page_size = int(first_page["page_size"])
+    if page_size != supported_page_size:
+        logger.warning("Requested size %d is greater than supported size %d" % (page_size, supported_page_size))
+    num_pages = min(max_pages, int(math.ceil(first_page["count"] / supported_page_size)))
+    if num_pages > 500:
+        logger.warning("Truncating results to 500 pages (25000 results) due to API limitation")
+        num_pages = 500
     logger.info("Fetching %d pages of AMO metadata" % num_pages)
-    pages_to_get = ["%s&page=%d" % (url, n) for n in range(1, num_pages + 1)]
+    pages_to_get = ["%s?%s&page=%d" % (url, search_params, n) for n in range(2, num_pages + 1)]
 
     session = create_request_session()
-
+    metadata = first_page["results"]
     while True:
         fatal_errors = 0
         unsent_requests = [grequests.get(url, verify=True, session=session) for url in pages_to_get]
@@ -54,6 +67,9 @@ def download_metadata(max_pages=(2 << 31), max_ext=(2 << 31), page_size=25):
         logger.error("Unable to fetch %d pages. Please try again later later" % len(pages_to_get))
         return None
 
+    if len(metadata) != first_page["count"]:
+        logger.warning("Got %d instead of the expected %d results" % (len(metadata), first_page["count"]))
+
     return metadata[0:min(len(metadata), max_ext)]
 
 
@@ -74,6 +90,8 @@ def update_files(metadata, hash_fs):
                 if ext_file["url"] in urls_to_get:
                     logger.warning("Duplicate URL in metadata: %s" % ext_file["url"])
                 urls_to_get.append(ext_file["url"])
+            else:
+                logger.debug("`%s` is already cached locally" %ext_file_hash)
 
     logger.info("Fetching %d uncached web extensions from AMO" % len(urls_to_get))
 
