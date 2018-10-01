@@ -12,3 +12,6 @@ webextaware.egg-info/
 .eggs/
 node_modules
 webext_hashfs
+Pipfile
+Pipfile.lock
+*.pyc

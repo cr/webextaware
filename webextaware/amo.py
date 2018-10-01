@@ -91,7 +91,7 @@ def update_files(metadata, hash_fs):
                     logger.warning("Duplicate URL in metadata: %s" % ext_file["url"])
                 urls_to_get.append(ext_file["url"])
             else:
-                logger.debug("`%s` is already cached locally" %ext_file_hash)
+                logger.debug("`%s` is already cached locally" % ext_file_hash)
 
     logger.info("Fetching %d uncached web extensions from AMO" % len(urls_to_get))
 

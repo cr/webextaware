@@ -5,16 +5,15 @@
 from nose.tools import *
 import os
 
-import tests
 from webextaware import metadata as md
 
 
-def test_metadata_object():
+def test_metadata_object(tmpdir, raw_meta):
     """Metadata cache object instantiation"""
-    md_file = os.path.join(tests.tmp_dir, "md.bz2")
-    meta = md.Metadata(data=tests.raw_meta, filename=md_file)
+    md_file = tmpdir.join("md.bz2")
+    meta = md.Metadata(data=raw_meta, filename=md_file)
     assert_true(type(meta) is md.Metadata, "has correct type")
-    assert_true(len(meta) > 0 and len(meta) > 0.5 * len(tests.raw_meta), "contains metadata on extensions")
+    assert_true(len(meta) > 0 and len(meta) > 0.5 * len(raw_meta), "contains metadata on extensions")
     assert_false(os.path.isfile(md_file), "metadata cache file is only written on demand")
     meta.save()
     assert_true(os.path.isfile(md_file), "metadata cache file is written on demand")
@@ -23,9 +22,9 @@ def test_metadata_object():
     assert_equal(len(meta), len(meta_again), "restores data from cache file")
 
 
-def test_metadata_extensions():
+def test_metadata_extensions(raw_meta):
     """Metadata extension objects"""
-    meta = md.Metadata(data=tests.raw_meta)
+    meta = md.Metadata(data=raw_meta)
     for e in meta:
         assert_true(type(e) is md.Extension, "iterating yields Extension objects")
         assert_true(type(e.id) is int and 0 < e.id < 100000000, "iterating yields Extensions with AMO IDs")
@@ -43,9 +42,9 @@ def test_metadata_extensions():
             assert_true(type(h) is str and h.isalnum() and len(h) == 64, "file IDs look like SHA256 hashes")
 
 
-def test_metadata_id_handling():
+def test_metadata_id_handling(raw_meta):
     """Metadata ID handling"""
-    meta = md.Metadata(data=tests.raw_meta)
+    meta = md.Metadata(data=raw_meta)
     assert_true(len(meta) > 0, "there is metadata to work with")
 
     for e in meta:
