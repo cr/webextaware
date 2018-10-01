@@ -9,26 +9,31 @@ PACKAGE_VERSION = "1.2.3"
 
 INSTALL_REQUIRES = [
     "coloredlogs",
+    "gevent",
     "grequests",
     "hashfs",
     "ipython",
     "json-cfg",
     "requests",
     "pynpm",
-    "python-magic"
+    "python-magic",
+    "urllib3"
 ]
 
 TESTS_REQUIRE = [
     "coverage",
     "mock",
-    "nose"
+    "pytest",
+    "pytest-runner"
 ]
 
 DEV_REQUIRES = [
     "coverage",
     "mock",
     "nose",
-    "pep8",
+    "pycodestyle",
+    "pytest",
+    "pytest-runner",
     "radon"
 ]
 
@@ -63,7 +68,6 @@ setup(
     use_2to3=False,
     install_requires=INSTALL_REQUIRES,
     tests_require=TESTS_REQUIRE,
-    test_suite='nose.collector',
     extras_require={"dev": DEV_REQUIRES},  # For `pip install -e .[dev]`
     entry_points={
         "console_scripts": [
