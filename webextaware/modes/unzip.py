@@ -23,6 +23,10 @@ class UnzipMode(RunMode):
 
     @staticmethod
     def setup_args(parser):
+        parser.add_argument("-n", "--nooverwrite",
+                            action="store_true",
+                            help="do not overwrite existing extension directories")
+
         parser.add_argument("-o", "--outdir",
                             action="store",
                             default="ext",
@@ -46,7 +50,13 @@ class UnzipMode(RunMode):
         for amo_id in exts:
             for ext_id in exts[amo_id]:
                 unzip_path = create_directory_path(str(amo_id), ext_id, base=self.args.outdir)
-                os.makedirs(unzip_path, exist_ok=True)
+                logger.debug("Considering to unzip %d to %s" % (amo_id, unzip_path))
+                try:
+                    os.makedirs(unzip_path, exist_ok=False)
+                except FileExistsError:
+                    if self.args.nooverwrite:
+                        logger.Info("Skipping existing directory %s" % unzip_path)
+                        continue
                 with exts[amo_id][ext_id] as ext:
                     ext.unzip(unzip_path)
                 print(unzip_path)
