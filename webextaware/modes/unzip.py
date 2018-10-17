@@ -55,7 +55,7 @@ class UnzipMode(RunMode):
                     os.makedirs(unzip_path, exist_ok=False)
                 except FileExistsError:
                     if self.args.nooverwrite:
-                        logger.Info("Skipping existing directory %s" % unzip_path)
+                        logger.info("Skipping existing directory %s" % unzip_path)
                         continue
                 with exts[amo_id][ext_id] as ext:
                     ext.unzip(unzip_path)
