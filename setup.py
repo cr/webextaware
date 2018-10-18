@@ -5,7 +5,7 @@
 from setuptools import setup, find_packages
 
 PACKAGE_NAME = "webextaware"
-PACKAGE_VERSION = "1.2.4"
+PACKAGE_VERSION = "1.2.5"
 
 INSTALL_REQUIRES = [
     "coloredlogs",
