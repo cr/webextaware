@@ -14,6 +14,7 @@ from . import shell
 from . import stats
 from . import sync
 from . import unzip
+from . import ziptest
 
 from .runmode import run, list_modes
 
@@ -31,5 +32,6 @@ __all__ = [
     "sync",
     "unzip",
     "run",
+    "ziptest",
     "list_modes"
 ]
