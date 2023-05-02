@@ -32,9 +32,11 @@ def download_metadata(max_pages=(2 << 31), max_ext=(2 << 31), page_size=50):
     if page_size != supported_page_size:
         logger.warning("Requested size %d is greater than supported size %d" % (page_size, supported_page_size))
     num_pages = min(max_pages, int(math.ceil(first_page["count"] / supported_page_size)))
-    if num_pages > 500:
-        logger.warning("Truncating results to 500 pages (25000 results) due to API limitation")
-        num_pages = 500
+    max_pages_in_api = first_page["page_count"]
+    if num_pages > max_pages_in_api:
+        actual_result_count = max_pages_in_api * supported_page_size
+        logger.warning("Truncating results to %d pages (%d results) due to API limitation" % (max_pages_in_api, actual_result_count))
+        num_pages = max_pages_in_api
     logger.info("Fetching %d pages of AMO metadata" % num_pages)
     pages_to_get = ["%s?%s&page=%d" % (url, search_params, n) for n in range(2, num_pages + 1)]
 
