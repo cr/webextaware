@@ -22,7 +22,6 @@ def download_metadata(max_pages=(2 << 31), max_ext=(2 << 31), page_size=50):
     search_params = "sort=created" \
         "&type=extension" \
         "&app=firefox" \
-        "&appversion=" + ",".join(map(str, range(57, 75))) + \
         "&page_size=%d" % page_size
     logger.debug("Search parameters for AMO query: %s" % search_params)
 
