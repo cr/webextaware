@@ -6,6 +6,7 @@ import hashfs
 import pytest
 
 from webextaware import amo
+from webextaware import metadata as md
 
 
 @pytest.fixture(scope="session")
@@ -23,5 +24,6 @@ def hfs_tmp(tmpdir_factory):
 @pytest.fixture(scope="session")
 def ext_db(raw_meta, hfs_tmp):
     edb = hashfs.HashFS(hfs_tmp, depth=4, width=1, algorithm='sha256')
-    amo.update_files(raw_meta, edb)
+    meta = md.Metadata(data=raw_meta)
+    amo.update_files(meta, edb)
     return edb

@@ -8,9 +8,9 @@ def test_amo_metadata_downloader(raw_meta):
     # Operates on data pre-downloaded by tests.__init__.setup_package()
     assert type(raw_meta) is list and type(raw_meta[0]) is dict, "delivers expected format"
     assert len(raw_meta) == 100, "delivers expected number of extensions"
-    assert "id" in raw_meta[0] and "current_version" in raw_meta[0] and "files" in raw_meta[0]["current_version"], \
+    assert "id" in raw_meta[0] and "current_version" in raw_meta[0] and "file" in raw_meta[0]["current_version"], \
         "metadata entries have expected format"
-    assert raw_meta[0]["current_version"]["files"][0]["hash"].startswith("sha256:"), "hashes are SHA256"
+    assert raw_meta[0]["current_version"]["file"]["hash"].startswith("sha256:"), "hashes are SHA256"
 
 
 def test_amo_extension_downloader(raw_meta, ext_db):
@@ -20,10 +20,9 @@ def test_amo_extension_downloader(raw_meta, ext_db):
     # Download AMO pages until they contain at least five web extension files
     all_extensions = set()
     for ext in raw_meta:
-        for f in ext["current_version"]["files"]:
-            if f["is_webextension"]:
-                h = f["hash"].split(":")[1]
-                all_extensions.add(h)
+        f = ext["current_version"]["file"]
+        h = f["hash"].split(":")[1]
+        all_extensions.add(h)
 
     # See which extensions were actually downloaded
     downloaded_extensions = set()

@@ -18,7 +18,7 @@ def download_metadata(max_pages=(2 << 31), max_ext=(2 << 31), page_size=50):
     global logger
 
     # Maximum page_size seems to be 50 right now, 25 is AMO's current default.
-    url = amo_server + "/api/v3/addons/search/"
+    url = amo_server + "/api/v5/addons/search/"
     search_params = "sort=created" \
         "&type=extension" \
         "&app=firefox" \
@@ -82,9 +82,7 @@ def __as_chunks(flat_list, chunk_size):
 def update_files(metadata, hash_fs):
     urls_to_get = []
     for ext in metadata:
-        for ext_file in ext["current_version"]["files"]:
-            if not ext_file["is_webextension"]:
-                continue
+        for ext_file in ext.files():
             ext_file_hash_type, ext_file_hash = ext_file["hash"].split(":")
             assert ext_file_hash_type == "sha256"
             if hash_fs.get(ext_file_hash) is None:

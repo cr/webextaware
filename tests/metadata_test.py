@@ -3,6 +3,9 @@
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 
 from nose.tools import *
+import bz2
+import copy
+import json
 import os
 
 from webextaware import metadata as md
@@ -77,3 +80,33 @@ def test_metadata_id_handling(raw_meta):
     assert_true(meta.get_by_id(hash_id) is None, "invalid AMO IDs yield None")
     assert_true(meta.get_by_hash(amo_id) is None, "invalid hash IDs yield None")
     assert_true(meta.get("invalid foo") is None, "invalid get yields None")
+
+def test_metadata_migration_from_amo_v3_to_v5(tmpdir, raw_meta):
+    raw_meta_old_v3 = copy.deepcopy(raw_meta)
+    for raw_ext in raw_meta_old_v3:
+        # Move "file" (from AMO API v5) to first item of "files" array (=AMO API v3).
+        raw_ext["current_version"]["files"] = [raw_ext["current_version"].pop("file")]
+        raw_ext["current_version"]["files"][0]["is_webextension"] = True
+
+    # AMO API v3 also had a is_webextension property that could be False.
+    raw_meta_old_v3[0]["current_version"]["files"][0]["is_webextension"] = False
+
+    number_of_webextensions_in_meta = len(raw_meta_old_v3) - 1
+
+    md_file = tmpdir.join("md_with_amo_api_v3_data.bz2")
+    with bz2.open(md_file, "w") as f:
+        f.write(json.dumps(raw_meta_old_v3).encode("utf-8"))
+
+    # Test importing from disk (this can happen if someone has a cache from early 2021).
+    meta = md.Metadata(filename=md_file)
+    assert_equal(len(meta), number_of_webextensions_in_meta, "found all WebExtensions in metadata file")
+    for e in meta:
+        assert_true(e.is_webextension(), "there are only web extensions in cache")
+        assert_equal(len(list(e.file_hashes())), 1, "got file hash")
+
+    # For good measure, also test the load-as-data variant:
+    meta = md.Metadata(data=raw_meta_old_v3)
+    assert_equal(len(meta), number_of_webextensions_in_meta, "found all WebExtensions in metadata")
+    for e in meta:
+        assert_true(e.is_webextension(), "there are only web extensions in cache")
+        assert_equal(len(list(e.file_hashes())), 1, "got file hash")

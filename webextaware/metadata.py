@@ -23,7 +23,7 @@ def create_directory_path(amo_id, ext_id, base=None):
 
 
 class Metadata(object):
-    def __init__(self, filename=None, data=None, webext_only=True):
+    def __init__(self, filename=None, data=None):
         self.__ext = []
         if data is not None:
             for e in data:
@@ -35,8 +35,6 @@ class Metadata(object):
         self.__id_index = {}
         if data is None and filename is not None:
             self.load(filename)
-        if webext_only:
-            self.__ext = list(filter(lambda ex: ex.is_webextension(), self.__ext))
         self.generate_index()
 
     def raw_data(self):
@@ -49,7 +47,9 @@ class Metadata(object):
             with bz2.open(metadata_filename, "r") as f:
                 logger.debug("Retrieving metadata state from `%s`" % metadata_filename)
                 for e in json.load(f):
-                    self.__ext.append(Extension(e))
+                    ext = Extension(e)
+                    if ext.is_webextension():
+                        self.__ext.append(ext)
         except FileNotFoundError:
             logger.warning("No metadata state stored in `%s`" % metadata_filename)
 
@@ -145,7 +145,7 @@ class Extension(dict):
     def permissions(self):
         aggregate_api_permissions = set()
         aggregate_host_permissions = set()
-        for f in self["current_version"]["files"]:
+        for f in self.files():
             for p in f["permissions"]:
                 if "/" in p or ":" in p or "<" in p:
                     aggregate_host_permissions.add(p)
@@ -158,22 +158,36 @@ class Extension(dict):
         return aggregate_host_permissions, aggregate_api_permissions
 
     def is_webextension(self):
-        if "current_version" not in self:
-            return False
-        for f in self["current_version"]["files"]:
-            if f["is_webextension"]:
-                return True
+        # True in practice, unless the metadata was downloaded before sep 2021.
+        for f in self.files():
+            return True
         return False
 
-    def files(self, webext_only=True):
-        if "current_version" not in self or "files" not in self["current_version"]:
+    def files(self):
+        if "current_version" not in self:
             return
+
+        # AMO API v5 (latest)
+        if "file" in self["current_version"]:
+            yield self["current_version"]["file"]
+            return
+
+        if "files" not in self["current_version"]:
+            return
+
+        # AMO API v3 (from disk by webextaware<=1.2.5)
+        # Until 2021, "files" could contain multiple items.
+        # Since sep 2021, "files" can only have one item:
+        # https://github.com/mozilla/addons-server/issues/17839
         for f in self["current_version"]["files"]:
-            if f["is_webextension"] or not webext_only:
+            # If the metadata was downloaded before sep 2021, is_webextension could be false.
+            # After sep 2021, all addons on AMO are WebExtensions:
+            # https://github.com/mozilla/addons-server/issues/17946
+            if f["is_webextension"]:
                 yield f
 
-    def file_hashes(self, webext_only=True):
-        for f in self.files(webext_only=webext_only):
+    def file_hashes(self):
+        for f in self.files():
             yield f["hash"].split(":")[1]
 
     def __iter__(self):
